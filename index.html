@@ -41,6 +41,7 @@
         }
         @keyframes twinkle { 0%, 100% { opacity: 0.7; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.8); } }
         
+        /* Disabled State Styles */
         .disabled-card { opacity: 0.7; pointer-events: none; filter: grayscale(0.2); }
     </style>
 </head>
@@ -52,7 +53,6 @@
         const { useState, useEffect, useRef, useMemo } = React;
         
         // --- HELPER UNIK UNTUK MEMISAHKAN DATA KELAS ---
-        // Fungsi ini membuat ID unik dari Link Guru agar data tidak tertukar
         const generateStorageID = (url) => {
             if (!url) return 'default';
             let hash = 0;
@@ -120,6 +120,7 @@
             ZoomIn: (p) => <Icon name="ZoomIn" {...p} />
         };
 
+        // --- DZIKIR LENGKAP (42 ITEM) ---
         const DAFTAR_DOA = [
             { judul: "1. Zikir Ketika Bangun Tidur", arab: "الْحَمْدُ لِلَّهِ الَّذِي أَحْيَانَا بَعْدَ مَا أَمَاتَنَا وَإِلَيْهِ النُّشُورُ", latin: "Alhamdu lillahil-ladzi ahyana ba'da ma amatana wa ilaihin-nushur.", arti: "Segala puji bagi Allah yang menghidupkan kami kembali setelah mematikan kami dan kepada-Nya (kami) akan dibangkitkan." },
             { judul: "2. Doa Memakai Pakaian", arab: "الْحَمْدُ لِلَّهِ الَّذِي كَسَانِي هَذَا (الثَّوْبَ) وَرَزَقَنِيهِ مِنْ غَيْرِ حَوْلٍ مِنِّي وَلَا قُوَّةٍ", latin: "Alhamdulillahilladzi kasaani hadza (ats-tsauba) wa razaqanihi min ghairi haulin minni wa laa quwwatin.", arti: "Segala puji bagi Allah yang telah memakaikan pakaian ini kepadaku dan mengaruniakannya kepadaku tanpa daya dan kekuatan dariku." },
@@ -210,6 +211,8 @@
             const [schoolName, setSchoolName] = useState('Sekolah Dasar Islam Terpadu');
             const [teacherPin, setTeacherPin] = useState('QA-12345'); 
             const [magicLinkStatus, setMagicLinkStatus] = useState(null); 
+            // STATE UNIK UNTUK PROFILE
+            const [localProfile, setLocalProfile] = useState({ name: '', class: '', scriptUrl: '' });
 
             useEffect(() => {
                 const params = new URLSearchParams(window.location.search);
@@ -217,20 +220,40 @@
                 const sekolahParam = params.get('school'); 
 
                 if (guruScript) {
+                    const savedUrl = localStorage.getItem('ramadanScriptUrl');
+                    
+                    // --- AUTO RESET JIKA LINK BERBEDA (Multi-Akun) ---
+                    if (savedUrl !== guruScript) {
+                        // Reset Profile Lokal
+                        const newProfile = { 
+                            name: '', 
+                            class: '', 
+                            scriptUrl: guruScript,
+                            schoolName: sekolahParam ? decodeURIComponent(sekolahParam) : 'Sekolah Dasar Islam Terpadu'
+                        };
+                        
+                        // Simpan sebagai Profile Utama yang Baru
+                        localStorage.setItem('ramadanProfile', JSON.stringify(newProfile));
+                        setLocalProfile(newProfile);
+                        
+                        if (sekolahParam) {
+                            const decoded = decodeURIComponent(sekolahParam);
+                            setSchoolName(decoded);
+                        }
+                    } else {
+                        // Jika Link Sama, Cek apakah ada update nama sekolah
+                        if (sekolahParam) {
+                            const decoded = decodeURIComponent(sekolahParam);
+                            setSchoolName(decoded);
+                            const saved = JSON.parse(localStorage.getItem('ramadanProfile') || '{}');
+                            saved.schoolName = decoded;
+                            localStorage.setItem('ramadanProfile', JSON.stringify(saved));
+                        }
+                    }
+
                     setScriptUrl(guruScript);
                     localStorage.setItem('ramadanScriptUrl', guruScript);
                     
-                    if (sekolahParam) {
-                        const decodedSchool = decodeURIComponent(sekolahParam);
-                        setSchoolName(decodedSchool);
-                        
-                        const savedProfile = localStorage.getItem('ramadanProfile') || '{}';
-                        const parsed = JSON.parse(savedProfile);
-                        parsed.schoolName = decodedSchool;
-                        parsed.scriptUrl = guruScript;
-                        localStorage.setItem('ramadanProfile', JSON.stringify(parsed));
-                    }
-
                     if (window.location.protocol !== 'file:') {
                         window.history.replaceState({}, document.title, window.location.pathname);
                     }
@@ -244,6 +267,8 @@
                     if (savedProfile) {
                         const parsed = JSON.parse(savedProfile);
                         if(parsed.schoolName) setSchoolName(parsed.schoolName);
+                        // Load profil lokal untuk form
+                        setLocalProfile(parsed);
                     }
                 }
 
@@ -262,12 +287,19 @@
                 parsed.schoolName = newSchoolName;
                 localStorage.setItem('ramadanProfile', JSON.stringify(parsed));
             };
+            
+            // Function to update local profile when user types in inputs
+            const updateStudentProfile = (field, value) => {
+                const newProfile = { ...localProfile, [field]: value, scriptUrl: scriptUrl };
+                setLocalProfile(newProfile);
+                localStorage.setItem('ramadanProfile', JSON.stringify(newProfile));
+            };
 
             const renderContent = () => {
-                if (role === 'home') return <HomeView setRole={setRole} schoolName={schoolName} scriptUrl={scriptUrl} teacherPin={teacherPin} onSaveSettings={updateGlobalSettings} magicLinkStatus={magicLinkStatus} />;
+                if (role === 'home') return <HomeView setRole={setRole} schoolName={schoolName} scriptUrl={scriptUrl} teacherPin={teacherPin} onSaveSettings={updateGlobalSettings} magicLinkStatus={magicLinkStatus} profile={localProfile} onProfileChange={updateStudentProfile} />;
                 if (role === 'teacher_login') return <TeacherLogin setRole={setRole} scriptUrl={scriptUrl} setScriptUrl={setScriptUrl} currentPin={teacherPin} />;
                 if (role === 'teacher') return <TeacherDashboard setRole={setRole} scriptUrl={scriptUrl} schoolName={schoolName} />;
-                if (role === 'student') return <StudentApp setRole={setRole} globalScriptUrl={scriptUrl} schoolName={schoolName} />;
+                if (role === 'student') return <StudentApp setRole={setRole} globalScriptUrl={scriptUrl} schoolName={schoolName} studentName={localProfile.name} studentClass={localProfile.class} />;
                 return null;
             };
 
@@ -290,7 +322,7 @@
         }
 
         // --- HOME SCREEN ---
-        function HomeView({ setRole, schoolName, scriptUrl, teacherPin, onSaveSettings }) {
+        function HomeView({ setRole, schoolName, scriptUrl, teacherPin, onSaveSettings, profile, onProfileChange }) {
             const [viewState, setViewState] = useState('home'); 
             const [tempSchoolName, setTempSchoolName] = useState(schoolName);
             const [tempScriptUrl, setTempScriptUrl] = useState(scriptUrl);
@@ -328,6 +360,14 @@
                 }
                 setRole('teacher');
             };
+            
+            const handleStudentEnter = () => {
+                if (!profile.name || !profile.class) {
+                    alert("Mohon isi Nama dan Kelas terlebih dahulu!");
+                    return;
+                }
+                setRole('student');
+            };
 
             return (
                 <div className="h-full bg-gradient-to-b from-emerald-600 to-emerald-800 flex flex-col items-center justify-center p-6 text-white relative overflow-y-auto">
@@ -344,6 +384,31 @@
                         <h1 className="text-2xl font-bold font-serif mb-1 leading-tight">Buku Amaliah<br/>Ramadan OnLine</h1>
                         <p className="text-emerald-100 text-sm font-bold mb-4 uppercase tracking-widest">{schoolName}</p>
                         
+                        {/* INPUT FOR MURID (RESETTABLE) */}
+                        <div className="space-y-3 mb-6 relative">
+                            <div className="relative">
+                                <input 
+                                    type="text" 
+                                    className="w-full p-3 rounded-xl border-none text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-emerald-300 outline-none shadow-inner bg-white/90 backdrop-blur" 
+                                    placeholder="Nama Lengkap" 
+                                    value={profile.name || ''} 
+                                    onChange={e => onProfileChange('name', e.target.value)} 
+                                />
+                                {profile.name && (
+                                    <button onClick={() => onProfileChange('name', '')} className="absolute right-3 top-3.5 text-slate-400 hover:text-red-500">
+                                        <Icons.XIcon size={16}/>
+                                    </button>
+                                )}
+                            </div>
+                            <input 
+                                type="text" 
+                                className="w-full p-3 rounded-xl border-none text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-emerald-300 outline-none shadow-inner bg-white/90 backdrop-blur" 
+                                placeholder="Kelas" 
+                                value={profile.class || ''} 
+                                onChange={e => onProfileChange('class', e.target.value)} 
+                            />
+                        </div>
+                        
                         <div className="mb-6 flex justify-center">
                             {scriptUrl ? (
                                 <span className="bg-green-500/20 text-green-100 px-3 py-1 rounded-full text-xs flex items-center gap-1 border border-green-400/30"><Icons.Wifi size={12}/> Terhubung ke Kelas</span>
@@ -353,9 +418,9 @@
                         </div>
                         
                         <div className="space-y-3">
-                            <button onClick={() => setRole('student')} className="w-full bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-bold py-4 rounded-xl flex items-center justify-center gap-3 transition-transform active:scale-95 shadow-lg border-b-4 border-yellow-600"><Icons.User size={24} /> Masuk sebagai Murid</button>
+                            <button onClick={handleStudentEnter} className="w-full bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-bold py-4 rounded-xl flex items-center justify-center gap-3 transition-transform active:scale-95 shadow-lg border-b-4 border-yellow-600"><Icons.User size={24} /> Masuk sebagai Murid</button>
                         </div>
-                        <div className="mt-8 pt-4 border-t border-white/10"><p className="text-[10px] text-emerald-200/60">Versi Final 9.1 (Multi-User Perfect)</p></div>
+                        <div className="mt-8 pt-4 border-t border-white/10"><p className="text-[10px] text-emerald-200/60">Versi Final 9.3 (Fix Ganti Akun)</p></div>
                     </div>
 
                     {/* PIN PROMPT */}
@@ -559,11 +624,11 @@
         }
 
         // --- STUDENT APP ---
-        function StudentApp({ setRole, globalScriptUrl, schoolName }) {
+        function StudentApp({ setRole, globalScriptUrl, schoolName, studentName, studentClass }) {
             const [activeDay, setActiveDay] = useState(1);
             const [view, setView] = useState('cover');
             const [userData, setUserData] = useState({});
-            const [studentProfile, setStudentProfile] = useState({ name: '', class: '', scriptUrl: globalScriptUrl || '' });
+            const [studentProfile, setStudentProfile] = useState({ name: studentName, class: studentClass, scriptUrl: globalScriptUrl || '' });
             const [showConfetti, setShowConfetti] = useState(false);
             const [isSubmitting, setIsSubmitting] = useState(false);
             const [selectedImage, setSelectedImage] = useState(null);
@@ -584,67 +649,38 @@
             const currentDateGregorian = getGregorianDate(studentProfile.startDateRamadan || '2026-02-18', activeDay);
             const triggerConfetti = () => { setShowConfetti(true); setTimeout(() => setShowConfetti(false), 3000); };
             
-            useEffect(() => {
-                const savedData = localStorage.getItem('ramadanJournalData');
-                if (savedData) setUserData(JSON.parse(savedData));
-                else { const init = {}; for(let i=1; i<=30; i++) { init[i] = { puasa: false, tarawih: false, validated: false }; } setUserData(init); }
-                const effectiveUrl = globalScriptUrl || localStorage.getItem('ramadanScriptUrl') || '';
-                const savedProfile = localStorage.getItem('ramadanProfile');
-                if (savedProfile) { setStudentProfile({...JSON.parse(savedProfile), scriptUrl: effectiveUrl}); } 
-                else if (effectiveUrl) { setStudentProfile(prev => ({...prev, scriptUrl: effectiveUrl})); }
-            }, [globalScriptUrl]);
-
-            useEffect(() => { if (Object.keys(userData).length > 0) localStorage.setItem('ramadanJournalData', JSON.stringify(userData)); }, [userData]);
-            useEffect(() => { localStorage.setItem('ramadanProfile', JSON.stringify(studentProfile)); }, [studentProfile]);
-
-            // ------------- FIX: USER-SPECIFIC STORAGE (KEY BASED ON URL) ----------------
-            // Generate Unique Storage Key based on Teacher Link (Class ID)
-            const getStorageKey = (type, teacherUrl) => {
-                const id = generateStorageID(teacherUrl);
-                return `ramadan_${type}_${id}`; // e.g. ramadan_userData_x7z9q
+            // ------------- FIX: USER-SPECIFIC STORAGE (KEY BASED ON URL & NAME) ----------------
+            // Generate Unique Storage Key based on Teacher Link (Class ID) AND Student Name
+            const getStorageKey = (type) => {
+                const id = generateStorageID(studentProfile.scriptUrl);
+                const nameKey = studentName ? studentName.trim().toLowerCase().replace(/\s+/g, '_') : 'guest';
+                return `ramadan_${type}_${id}_${nameKey}`; // e.g. ramadan_userData_x7z9q_ahmad
             };
             
-            // LOAD Data when Link/Class Changes
+            // LOAD Data when Component Mounts
             useEffect(() => {
-                if (studentProfile.scriptUrl) {
-                    const dataKey = getStorageKey('userData', studentProfile.scriptUrl);
-                    const profileKey = getStorageKey('profile', studentProfile.scriptUrl);
-
+                if (studentProfile.scriptUrl && studentProfile.name) {
+                    const dataKey = getStorageKey('userData');
                     const savedData = localStorage.getItem(dataKey);
-                    const savedProfileLocal = localStorage.getItem(profileKey);
 
                     if (savedData) {
                         setUserData(JSON.parse(savedData));
                     } else {
-                        // Init new empty data for this NEW CLASS
+                        // Init new empty data for this NEW STUDENT in this CLASS
                         const init = {}; 
                         for(let i=1; i<=30; i++) { init[i] = { puasa: false, tarawih: false, validated: false }; }
                         setUserData(init);
                     }
-
-                    // Optional: If you want to load the specific name used for this class previously
-                    if (savedProfileLocal) {
-                        const localP = JSON.parse(savedProfileLocal);
-                        setStudentProfile(prev => ({...prev, name: localP.name, class: localP.class}));
-                    }
                 }
-            }, [studentProfile.scriptUrl]);
+            }, [studentProfile.scriptUrl, studentProfile.name]);
 
             // SAVE Data to specific key when userData changes
             useEffect(() => {
-                if (studentProfile.scriptUrl && Object.keys(userData).length > 0) {
-                    const dataKey = getStorageKey('userData', studentProfile.scriptUrl);
+                if (studentProfile.scriptUrl && studentProfile.name && Object.keys(userData).length > 0) {
+                    const dataKey = getStorageKey('userData');
                     localStorage.setItem(dataKey, JSON.stringify(userData));
                 }
-            }, [userData, studentProfile.scriptUrl]);
-
-            // SAVE Profile Name/Class to specific key when it changes
-            useEffect(() => {
-                 if (studentProfile.scriptUrl && studentProfile.name) {
-                    const profileKey = getStorageKey('profile', studentProfile.scriptUrl);
-                    localStorage.setItem(profileKey, JSON.stringify({name: studentProfile.name, class: studentProfile.class}));
-                }
-            }, [studentProfile.name, studentProfile.class, studentProfile.scriptUrl]);
+            }, [userData, studentProfile.scriptUrl, studentProfile.name]);
             // ---------------------------------------------------------
 
             // CHECK SUBMISSIONS FOR CURRENT DAY (SERVER + LOCAL MERGE - PERSISTENT)
@@ -782,7 +818,7 @@
             if (view === 'cover') return (
                 <div className="h-full bg-emerald-50 p-6 flex flex-col items-center justify-center text-center font-sans overflow-hidden">
                     <div className="bg-white p-6 rounded-3xl shadow-xl w-full border border-emerald-100">
-                        <h1 className="text-xl font-bold text-emerald-800 mb-2">Assalamu'alaikum, Murid Sholeh!</h1>
+                        <h1 className="text-xl font-bold text-emerald-800 mb-2">Halo, Murid Sholeh!</h1>
                         <input type="text" className="w-full p-3 border rounded-xl mb-3" placeholder="Nama Lengkap" value={studentProfile.name} onChange={e => setStudentProfile({...studentProfile, name: e.target.value})} />
                         <input type="text" className="w-full p-3 border rounded-xl mb-6" placeholder="Kelas" value={studentProfile.class} onChange={e => setStudentProfile({...studentProfile, class: e.target.value})} />
                         <div className="text-xs text-gray-400 mb-4 flex items-center justify-center gap-1">{studentProfile.scriptUrl ? <span className="text-green-600 flex items-center gap-1"><Icons.Wifi size={12}/> Terhubung ke Guru</span> : <span className="text-red-400 flex items-center gap-1"><Icons.WifiOff size={12}/> Belum Terhubung</span>}</div>
