@@ -41,7 +41,6 @@
         }
         @keyframes twinkle { 0%, 100% { opacity: 0.7; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.8); } }
         
-        /* Disabled State Styles */
         .disabled-card { opacity: 0.7; pointer-events: none; filter: grayscale(0.2); }
     </style>
 </head>
@@ -52,6 +51,19 @@
     <script type="text/babel" data-presets="react">
         const { useState, useEffect, useRef, useMemo } = React;
         
+        // --- HELPER UNIK UNTUK MEMISAHKAN DATA KELAS ---
+        // Fungsi ini membuat ID unik dari Link Guru agar data tidak tertukar
+        const generateStorageID = (url) => {
+            if (!url) return 'default';
+            let hash = 0;
+            for (let i = 0; i < url.length; i++) {
+                const char = url.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            return Math.abs(hash).toString(36);
+        };
+
         // --- SISTEM IKON ---
         const LucideIcons = window.lucide ? window.lucide.icons : {};
         const Icon = ({ name, size = 20, className = "", ...props }) => {
@@ -108,7 +120,6 @@
             ZoomIn: (p) => <Icon name="ZoomIn" {...p} />
         };
 
-        // --- DZIKIR LENGKAP (42 ITEM) ---
         const DAFTAR_DOA = [
             { judul: "1. Zikir Ketika Bangun Tidur", arab: "الْحَمْدُ لِلَّهِ الَّذِي أَحْيَانَا بَعْدَ مَا أَمَاتَنَا وَإِلَيْهِ النُّشُورُ", latin: "Alhamdu lillahil-ladzi ahyana ba'da ma amatana wa ilaihin-nushur.", arti: "Segala puji bagi Allah yang menghidupkan kami kembali setelah mematikan kami dan kepada-Nya (kami) akan dibangkitkan." },
             { judul: "2. Doa Memakai Pakaian", arab: "الْحَمْدُ لِلَّهِ الَّذِي كَسَانِي هَذَا (الثَّوْبَ) وَرَزَقَنِيهِ مِنْ غَيْرِ حَوْلٍ مِنِّي وَلَا قُوَّةٍ", latin: "Alhamdulillahilladzi kasaani hadza (ats-tsauba) wa razaqanihi min ghairi haulin minni wa laa quwwatin.", arti: "Segala puji bagi Allah yang telah memakaikan pakaian ini kepadaku dan mengaruniakannya kepadaku tanpa daya dan kekuatan dariku." },
@@ -170,14 +181,13 @@
                     img.src = e.target.result;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        // INCREASED RESOLUTION FOR BETTER READABILITY (Handwriting)
                         const MAX_WIDTH = 600; 
                         const scaleSize = MAX_WIDTH / img.width;
                         canvas.width = (scaleSize < 1) ? MAX_WIDTH : img.width;
                         canvas.height = (scaleSize < 1) ? (img.height * scaleSize) : img.height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.6)); // Quality 0.6
+                        resolve(canvas.toDataURL('image/jpeg', 0.6)); 
                     }
                 }
             });
@@ -345,7 +355,7 @@
                         <div className="space-y-3">
                             <button onClick={() => setRole('student')} className="w-full bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-bold py-4 rounded-xl flex items-center justify-center gap-3 transition-transform active:scale-95 shadow-lg border-b-4 border-yellow-600"><Icons.User size={24} /> Masuk sebagai Murid</button>
                         </div>
-                        <div className="mt-8 pt-4 border-t border-white/10"><p className="text-[10px] text-emerald-200/60">Versi Final 9.0 (Multi-User Safe)</p></div>
+                        <div className="mt-8 pt-4 border-t border-white/10"><p className="text-[10px] text-emerald-200/60">Versi Final 9.1 (Multi-User Perfect)</p></div>
                     </div>
 
                     {/* PIN PROMPT */}
@@ -587,36 +597,54 @@
             useEffect(() => { if (Object.keys(userData).length > 0) localStorage.setItem('ramadanJournalData', JSON.stringify(userData)); }, [userData]);
             useEffect(() => { localStorage.setItem('ramadanProfile', JSON.stringify(studentProfile)); }, [studentProfile]);
 
-            // ------------- FIX: USER-SPECIFIC STORAGE ----------------
-            // Generate Unique Storage Key based on Student Name (and School if needed, but name is usually enough in family context)
-            const getStorageKey = (name) => {
-                const cleanName = name ? name.trim().toLowerCase().replace(/\s+/g, '_') : 'guest';
-                return `ramadan_data_${cleanName}`;
+            // ------------- FIX: USER-SPECIFIC STORAGE (KEY BASED ON URL) ----------------
+            // Generate Unique Storage Key based on Teacher Link (Class ID)
+            const getStorageKey = (type, teacherUrl) => {
+                const id = generateStorageID(teacherUrl);
+                return `ramadan_${type}_${id}`; // e.g. ramadan_userData_x7z9q
             };
             
-            // LOAD Data when Student Name Changes
+            // LOAD Data when Link/Class Changes
             useEffect(() => {
-                if (studentProfile.name) {
-                    const key = getStorageKey(studentProfile.name);
-                    const saved = localStorage.getItem(key);
-                    if (saved) {
-                        setUserData(JSON.parse(saved));
+                if (studentProfile.scriptUrl) {
+                    const dataKey = getStorageKey('userData', studentProfile.scriptUrl);
+                    const profileKey = getStorageKey('profile', studentProfile.scriptUrl);
+
+                    const savedData = localStorage.getItem(dataKey);
+                    const savedProfileLocal = localStorage.getItem(profileKey);
+
+                    if (savedData) {
+                        setUserData(JSON.parse(savedData));
                     } else {
-                        // Init new empty data for this user
+                        // Init new empty data for this NEW CLASS
                         const init = {}; 
                         for(let i=1; i<=30; i++) { init[i] = { puasa: false, tarawih: false, validated: false }; }
                         setUserData(init);
                     }
+
+                    // Optional: If you want to load the specific name used for this class previously
+                    if (savedProfileLocal) {
+                        const localP = JSON.parse(savedProfileLocal);
+                        setStudentProfile(prev => ({...prev, name: localP.name, class: localP.class}));
+                    }
                 }
-            }, [studentProfile.name]);
+            }, [studentProfile.scriptUrl]);
 
             // SAVE Data to specific key when userData changes
             useEffect(() => {
-                if (studentProfile.name && Object.keys(userData).length > 0) {
-                    const key = getStorageKey(studentProfile.name);
-                    localStorage.setItem(key, JSON.stringify(userData));
+                if (studentProfile.scriptUrl && Object.keys(userData).length > 0) {
+                    const dataKey = getStorageKey('userData', studentProfile.scriptUrl);
+                    localStorage.setItem(dataKey, JSON.stringify(userData));
                 }
-            }, [userData, studentProfile.name]);
+            }, [userData, studentProfile.scriptUrl]);
+
+            // SAVE Profile Name/Class to specific key when it changes
+            useEffect(() => {
+                 if (studentProfile.scriptUrl && studentProfile.name) {
+                    const profileKey = getStorageKey('profile', studentProfile.scriptUrl);
+                    localStorage.setItem(profileKey, JSON.stringify({name: studentProfile.name, class: studentProfile.class}));
+                }
+            }, [studentProfile.name, studentProfile.class, studentProfile.scriptUrl]);
             // ---------------------------------------------------------
 
             // CHECK SUBMISSIONS FOR CURRENT DAY (SERVER + LOCAL MERGE - PERSISTENT)
@@ -754,7 +782,7 @@
             if (view === 'cover') return (
                 <div className="h-full bg-emerald-50 p-6 flex flex-col items-center justify-center text-center font-sans overflow-hidden">
                     <div className="bg-white p-6 rounded-3xl shadow-xl w-full border border-emerald-100">
-                        <h1 className="text-xl font-bold text-emerald-800 mb-2">Halo, Murid Sholeh!</h1>
+                        <h1 className="text-xl font-bold text-emerald-800 mb-2">Assalamu'alaikum, Murid Sholeh!</h1>
                         <input type="text" className="w-full p-3 border rounded-xl mb-3" placeholder="Nama Lengkap" value={studentProfile.name} onChange={e => setStudentProfile({...studentProfile, name: e.target.value})} />
                         <input type="text" className="w-full p-3 border rounded-xl mb-6" placeholder="Kelas" value={studentProfile.class} onChange={e => setStudentProfile({...studentProfile, class: e.target.value})} />
                         <div className="text-xs text-gray-400 mb-4 flex items-center justify-center gap-1">{studentProfile.scriptUrl ? <span className="text-green-600 flex items-center gap-1"><Icons.Wifi size={12}/> Terhubung ke Guru</span> : <span className="text-red-400 flex items-center gap-1"><Icons.WifiOff size={12}/> Belum Terhubung</span>}</div>
