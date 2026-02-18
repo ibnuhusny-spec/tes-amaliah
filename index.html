@@ -818,7 +818,7 @@
             if (view === 'cover') return (
                 <div className="h-full bg-emerald-50 p-6 flex flex-col items-center justify-center text-center font-sans overflow-hidden">
                     <div className="bg-white p-6 rounded-3xl shadow-xl w-full border border-emerald-100">
-                        <h1 className="text-xl font-bold text-emerald-800 mb-2">Halo, Murid Sholeh!</h1>
+                        <h1 className="text-xl font-bold text-emerald-800 mb-2">Assalamu'alaikum, Murid Sholeh/ah!</h1>
                         <input type="text" className="w-full p-3 border rounded-xl mb-3" placeholder="Nama Lengkap" value={studentProfile.name} onChange={e => setStudentProfile({...studentProfile, name: e.target.value})} />
                         <input type="text" className="w-full p-3 border rounded-xl mb-6" placeholder="Kelas" value={studentProfile.class} onChange={e => setStudentProfile({...studentProfile, class: e.target.value})} />
                         <div className="text-xs text-gray-400 mb-4 flex items-center justify-center gap-1">{studentProfile.scriptUrl ? <span className="text-green-600 flex items-center gap-1"><Icons.Wifi size={12}/> Terhubung ke Guru</span> : <span className="text-red-400 flex items-center gap-1"><Icons.WifiOff size={12}/> Belum Terhubung</span>}</div>
@@ -968,3 +968,4 @@
     </script>
 </body>
 </html>
+
