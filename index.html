@@ -222,11 +222,14 @@
             const [magicLinkStatus, setMagicLinkStatus] = useState(null); 
             // STATE UNIK UNTUK PROFILE
             const [localProfile, setLocalProfile] = useState({ name: '', class: '', scriptUrl: '' });
+            // STATE TANGGAL MULAI RAMADAN (Default sementara)
+            const [startRamadanDate, setStartRamadanDate] = useState('2026-02-18');
 
             useEffect(() => {
                 const params = new URLSearchParams(window.location.search);
                 const guruScript = params.get('guru');
                 const sekolahParam = params.get('school'); 
+                const startDateParam = params.get('start'); 
 
                 if (guruScript) {
                     const savedUrl = localStorage.getItem('ramadanScriptUrl');
@@ -238,7 +241,8 @@
                             name: '', 
                             class: '', 
                             scriptUrl: guruScript,
-                            schoolName: sekolahParam ? decodeURIComponent(sekolahParam) : 'Sekolah Dasar Islam Terpadu'
+                            schoolName: sekolahParam ? decodeURIComponent(sekolahParam) : 'Sekolah Dasar Islam Terpadu',
+                            startDate: startDateParam || '2026-02-18'
                         };
                         
                         // Simpan sebagai Profile Utama yang Baru
@@ -249,15 +253,26 @@
                             const decoded = decodeURIComponent(sekolahParam);
                             setSchoolName(decoded);
                         }
+                        if (startDateParam) setStartRamadanDate(startDateParam);
+
                     } else {
-                        // Jika Link Sama, Cek apakah ada update nama sekolah
-                        if (sekolahParam) {
+                        // Jika Link Sama, Cek apakah ada update
+                        let updated = false;
+                        const saved = JSON.parse(localStorage.getItem('ramadanProfile') || '{}');
+                        
+                        if (sekolahParam && decodeURIComponent(sekolahParam) !== saved.schoolName) {
                             const decoded = decodeURIComponent(sekolahParam);
                             setSchoolName(decoded);
-                            const saved = JSON.parse(localStorage.getItem('ramadanProfile') || '{}');
                             saved.schoolName = decoded;
-                            localStorage.setItem('ramadanProfile', JSON.stringify(saved));
+                            updated = true;
                         }
+                        if (startDateParam && startDateParam !== saved.startDate) {
+                            setStartRamadanDate(startDateParam);
+                            saved.startDate = startDateParam;
+                            updated = true;
+                        }
+
+                        if(updated) localStorage.setItem('ramadanProfile', JSON.stringify(saved));
                     }
 
                     setScriptUrl(guruScript);
@@ -276,6 +291,7 @@
                     if (savedProfile) {
                         const parsed = JSON.parse(savedProfile);
                         if(parsed.schoolName) setSchoolName(parsed.schoolName);
+                        if(parsed.startDate) setStartRamadanDate(parsed.startDate);
                         // Load profil lokal untuk form
                         setLocalProfile(parsed);
                     }
@@ -283,17 +299,26 @@
 
                 const savedPin = localStorage.getItem('teacherPin');
                 if (savedPin) setTeacherPin(savedPin);
+                
+                const savedStartDate = localStorage.getItem('startRamadanDate');
+                if (savedStartDate) setStartRamadanDate(savedStartDate);
+
             }, []);
 
-            const updateGlobalSettings = (newSchoolName, newScriptUrl, newPin) => {
+            const updateGlobalSettings = (newSchoolName, newScriptUrl, newPin, newStartDate) => {
                 setSchoolName(newSchoolName);
                 setScriptUrl(newScriptUrl);
                 setTeacherPin(newPin);
+                setStartRamadanDate(newStartDate);
+                
                 localStorage.setItem('ramadanScriptUrl', newScriptUrl);
                 localStorage.setItem('teacherPin', newPin);
+                localStorage.setItem('startRamadanDate', newStartDate);
+                
                 const savedProfile = localStorage.getItem('ramadanProfile') || '{}';
                 const parsed = JSON.parse(savedProfile);
                 parsed.schoolName = newSchoolName;
+                parsed.startDate = newStartDate;
                 localStorage.setItem('ramadanProfile', JSON.stringify(parsed));
             };
             
@@ -305,10 +330,10 @@
             };
 
             const renderContent = () => {
-                if (role === 'home') return <HomeView setRole={setRole} schoolName={schoolName} scriptUrl={scriptUrl} teacherPin={teacherPin} onSaveSettings={updateGlobalSettings} magicLinkStatus={magicLinkStatus} profile={localProfile} onProfileChange={updateStudentProfile} />;
+                if (role === 'home') return <HomeView setRole={setRole} schoolName={schoolName} scriptUrl={scriptUrl} teacherPin={teacherPin} startRamadanDate={startRamadanDate} onSaveSettings={updateGlobalSettings} magicLinkStatus={magicLinkStatus} profile={localProfile} onProfileChange={updateStudentProfile} />;
                 if (role === 'teacher_login') return <TeacherLogin setRole={setRole} scriptUrl={scriptUrl} setScriptUrl={setScriptUrl} currentPin={teacherPin} />;
-                if (role === 'teacher') return <TeacherDashboard setRole={setRole} scriptUrl={scriptUrl} schoolName={schoolName} />;
-                if (role === 'student') return <StudentApp setRole={setRole} globalScriptUrl={scriptUrl} schoolName={schoolName} studentName={localProfile.name} studentClass={localProfile.class} />;
+                if (role === 'teacher') return <TeacherDashboard setRole={setRole} scriptUrl={scriptUrl} schoolName={schoolName} startRamadanDate={startRamadanDate} />;
+                if (role === 'student') return <StudentApp setRole={setRole} globalScriptUrl={scriptUrl} schoolName={schoolName} studentName={localProfile.name} studentClass={localProfile.class} startRamadanDate={startRamadanDate} />;
                 return null;
             };
 
@@ -331,17 +356,19 @@
         }
 
         // --- HOME SCREEN ---
-        function HomeView({ setRole, schoolName, scriptUrl, teacherPin, onSaveSettings, profile, onProfileChange }) {
+        function HomeView({ setRole, schoolName, scriptUrl, teacherPin, startRamadanDate, onSaveSettings, profile, onProfileChange }) {
             const [viewState, setViewState] = useState('home'); 
             const [tempSchoolName, setTempSchoolName] = useState(schoolName);
             const [tempScriptUrl, setTempScriptUrl] = useState(scriptUrl);
             const [tempPin, setTempPin] = useState(teacherPin);
+            const [tempStartDate, setTempStartDate] = useState(startRamadanDate);
             const [inputPin, setInputPin] = useState('');
             const [showPinChar, setShowPinChar] = useState(false);
             const [logoError, setLogoError] = useState(false);
 
             useEffect(() => { setTempScriptUrl(scriptUrl); }, [scriptUrl]);
             useEffect(() => { setTempSchoolName(schoolName); }, [schoolName]);
+            useEffect(() => { setTempStartDate(startRamadanDate); }, [startRamadanDate]);
 
             const handlePinSubmit = () => {
                 if (inputPin === teacherPin) {
@@ -358,8 +385,12 @@
                      alert("Link Script Salah! Link harus berakhiran '/exec'.\nSilakan buat Deployment Baru di Google Apps Script.");
                      return;
                 }
-                onSaveSettings(tempSchoolName, tempScriptUrl, tempPin);
-                alert("Pengaturan tersimpan! Nama Sekolah & Link diperbarui.");
+                if (!tempStartDate) {
+                     alert("Pilih Tanggal 1 Ramadan terlebih dahulu!");
+                     return;
+                }
+                onSaveSettings(tempSchoolName, tempScriptUrl, tempPin, tempStartDate);
+                alert("Pengaturan tersimpan! Nama Sekolah, Tanggal Ramadan, & Link diperbarui.");
             };
 
             const goToDashboard = () => {
@@ -429,7 +460,7 @@
                         <div className="space-y-3">
                             <button onClick={handleStudentEnter} className="w-full bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-bold py-4 rounded-xl flex items-center justify-center gap-3 transition-transform active:scale-95 shadow-lg border-b-4 border-yellow-600"><Icons.User size={24} /> Masuk sebagai Murid</button>
                         </div>
-                        <div className="mt-8 pt-4 border-t border-white/10"><p className="text-[10px] text-emerald-200/60">Versi Final 10.4 (Resolusi Gambar Maksimal)</p></div>
+                        <div className="mt-8 pt-4 border-t border-white/10"><p className="text-[10px] text-emerald-200/60">Versi 10.5 (Atur Tgl Ramadan & Navigasi Bebas)</p></div>
                     </div>
 
                     {/* PIN PROMPT */}
@@ -467,6 +498,14 @@
                                         <h3 className="font-bold text-sm text-slate-700 flex items-center gap-2"><Icons.Settings size={16}/> Pengaturan Aplikasi</h3>
                                         <div><label className="text-[10px] font-bold text-slate-500 block mb-1">Nama Sekolah</label><input type="text" value={tempSchoolName} onChange={e => setTempSchoolName(e.target.value)} className="w-full p-2 border rounded-lg text-sm bg-white" /></div>
                                         <div><label className="text-[10px] font-bold text-slate-500 block mb-1">Link Script Google Apps</label><input type="text" value={tempScriptUrl} onChange={e => setTempScriptUrl(e.target.value)} className="w-full p-2 border rounded-lg text-xs font-mono bg-white text-slate-600" placeholder="https://script.google.com..." /></div>
+                                        
+                                        {/* PENGATURAN TANGGAL 1 RAMADAN */}
+                                        <div className="pt-2 border-t border-slate-200">
+                                            <label className="text-[10px] font-bold text-indigo-600 block mb-1 flex items-center gap-1"><Icons.Moon size={12}/> Tanggal 1 Ramadan (Isbat)</label>
+                                            <input type="date" value={tempStartDate} onChange={e => setTempStartDate(e.target.value)} className="w-full p-2 border border-indigo-200 rounded-lg text-sm bg-indigo-50 text-indigo-800 outline-none focus:ring-1 focus:ring-indigo-400" />
+                                            <p className="text-[9px] text-slate-400 mt-1">Ini akan mengubah tampilan tanggal di aplikasi semua murid.</p>
+                                        </div>
+
                                         <div className="pt-2 border-t border-slate-200"><label className="text-[10px] font-bold text-red-500 block mb-1">Ganti PIN Guru (Hati-hati)</label><input type="text" value={tempPin} onChange={e => setTempPin(e.target.value)} className="w-full p-2 border border-red-200 rounded-lg text-sm bg-red-50 text-center font-bold tracking-widest text-red-800" /></div>
                                         <button onClick={handleSave} className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold text-xs hover:bg-blue-700 flex justify-center items-center gap-2"><Icons.Save size={14}/> Simpan Pengaturan</button>
                                     </div>
@@ -480,7 +519,7 @@
         }
 
         // --- TEACHER DASHBOARD ---
-        function TeacherDashboard({ setRole, scriptUrl, schoolName }) {
+        function TeacherDashboard({ setRole, scriptUrl, schoolName, startRamadanDate }) {
             const [data, setData] = useState([]);
             const [loading, setLoading] = useState(true);
             const [selectedStudent, setSelectedStudent] = useState(null);
@@ -534,9 +573,10 @@
                 if (isLocal) { prompt("Anda offline. Salin Link Script ini manual:", scriptUrl); return; }
                 
                 const baseUrl = window.location.href.split('?')[0];
-                const magicLink = `${baseUrl}?guru=${encodeURIComponent(scriptUrl)}&school=${encodeURIComponent(schoolName)}`;
+                // Menyertakan pengaturan tanggal 1 ramadan ke dalam link
+                const magicLink = `${baseUrl}?guru=${encodeURIComponent(scriptUrl)}&school=${encodeURIComponent(schoolName)}&start=${startRamadanDate}`;
                 
-                if (navigator.clipboard) { navigator.clipboard.writeText(magicLink).then(() => alert("✨ Link Ajaib Tersalin!\n\nLink ini sudah berisi: \n1. Koneksi Database\n2. Nama Sekolah ("+schoolName+")\n\nMurid tinggal klik dan pakai!")).catch(() => prompt("Salin manual:", magicLink)); } else { prompt("Salin link:", magicLink); }
+                if (navigator.clipboard) { navigator.clipboard.writeText(magicLink).then(() => alert("✨ Link Ajaib Tersalin!\n\nLink ini sudah berisi: \n1. Koneksi Database\n2. Nama Sekolah\n3. Setingan Tgl 1 Ramadan\n\nMurid tinggal klik dan pakai!")).catch(() => prompt("Salin manual:", magicLink)); } else { prompt("Salin link:", magicLink); }
             };
 
             const getFilteredData = () => {
@@ -661,7 +701,7 @@
         }
 
         // --- STUDENT APP ---
-        function StudentApp({ setRole, globalScriptUrl, schoolName, studentName, studentClass }) {
+        function StudentApp({ setRole, globalScriptUrl, schoolName, studentName, studentClass, startRamadanDate }) {
             const [activeDay, setActiveDay] = useState(1);
             const [view, setView] = useState('cover');
             const [userData, setUserData] = useState({});
@@ -681,7 +721,8 @@
             // KUNCI SEMENTARA UNTUK MENCEGAH DOUBLE SUBMIT
             const [localLocks, setLocalLocks] = useState({});
 
-            const currentDateGregorian = getGregorianDate(studentProfile.startDateRamadan || '2026-02-18', activeDay);
+            // Menggunakan startRamadanDate prop untuk menghitung tanggal Masehi di UI Murid
+            const currentDateGregorian = getGregorianDate(startRamadanDate || '2026-02-18', activeDay);
             const triggerConfetti = () => { setShowConfetti(true); setTimeout(() => setShowConfetti(false), 3000); };
             
             // ------------- USER-SPECIFIC STORAGE ----------------
@@ -999,23 +1040,9 @@
             useEffect(() => { fetchRaport(); }, [studentProfile.scriptUrl]);
             useEffect(() => { if (view === 'raport') fetchRaport(); }, [view]);
 
-            // AUTO JUMP HARI BERDASARKAN SERVER SAJA
-            useEffect(() => {
-                if (raportData && raportData.length > 0) {
-                    let targetDay = 1;
-                    for (let i = 1; i <= 30; i++) {
-                        if (isDayJournalSubmitted(i)) {
-                            targetDay = i < 30 ? i + 1 : 30; 
-                        } else {
-                            break;
-                        }
-                    }
-                    setActiveDay(targetDay);
-                } else if (raportData.length === 0) {
-                    setActiveDay(1); // Kalau sheet kosong, kembali ke hari 1
-                }
-            // eslint-disable-next-line react-hooks/exhaustive-deps
-            }, [raportData.length]); 
+            // [DIHAPUS] AUTO JUMP HARI BERDASARKAN SERVER SAJA 
+            // Sengaja dihapus atau dimatikan agar murid bebas memilih di hari ke-berapa ia mau setor,
+            // tanpa digeser paksa ke hari selanjutnya setelah menyetor Jurnal/Audio/Foto.
 
             // --- KAMUS TEMA WARNA ---
             const colorThemes = {
