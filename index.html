@@ -420,7 +420,7 @@
                         <div className="space-y-3">
                             <button onClick={handleStudentEnter} className="w-full bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-bold py-4 rounded-xl flex items-center justify-center gap-3 transition-transform active:scale-95 shadow-lg border-b-4 border-yellow-600"><Icons.User size={24} /> Masuk sebagai Murid</button>
                         </div>
-                        <div className="mt-8 pt-4 border-t border-white/10"><p className="text-[10px] text-emerald-200/60">Versi Final 9.4 (Fix Poin & Autojump)</p></div>
+                        <div className="mt-8 pt-4 border-t border-white/10"><p className="text-[10px] text-emerald-200/60">Versi Final 9.5 (Akurat Filter, Navigasi Aktif)</p></div>
                     </div>
 
                     {/* PIN PROMPT */}
@@ -527,11 +527,18 @@
                 if (navigator.clipboard) { navigator.clipboard.writeText(magicLink).then(() => alert("✨ Link Ajaib Tersalin!\n\nLink ini sudah berisi: \n1. Koneksi Database\n2. Nama Sekolah ("+schoolName+")\n\nMurid tinggal klik dan pakai!")).catch(() => prompt("Salin manual:", magicLink)); } else { prompt("Salin link:", magicLink); }
             };
 
+            // PERBAIKAN FILTER: Menggunakan teks Rincian yang akurat untuk mencegah salah tab
             const getFilteredData = () => {
-                if (activeTab === 'hafalan') return data.filter(item => item.audio && item.audio.length > 50);
-                if (activeTab === 'galeri') return data.filter(item => item.foto && item.foto.length > 50);
-                // Jurnal = yang BUKAN audio dan BUKAN foto
-                return data.filter(item => (!item.audio || item.audio.length <= 50) && (!item.foto || item.foto.length <= 50)); 
+                return data.filter(item => {
+                    const text = item.rincian || item.kebaikan || "";
+                    const isHafalan = text.includes('🎤') || (item.audio && item.audio.length > 50);
+                    const isGaleri = text.includes('📸') || (item.foto && item.foto.length > 50);
+
+                    if (activeTab === 'hafalan') return isHafalan;
+                    if (activeTab === 'galeri') return isGaleri;
+                    // Jurnal = yang bukan hafalan dan bukan galeri
+                    return !isHafalan && !isGaleri;
+                });
             };
             
             // FUNGSI KELUAR DENGAN KONFIRMASI
@@ -600,17 +607,15 @@
                         </div>
                     </div>
                     
-                    {/* LIGHTBOX MODAL (TEACHER) - IMPROVED CLOSE BUTTON */}
+                    {/* LIGHTBOX MODAL (TEACHER) */}
                     {previewImage && (
                         <div className="fixed inset-0 bg-black/95 z-[100] flex flex-col items-center justify-center p-4 animate-in fade-in" onClick={() => setPreviewImage(null)}>
                             {/* Tombol Tutup Atas */}
                             <button onClick={() => setPreviewImage(null)} className="absolute top-8 right-6 text-white bg-red-600/80 p-3 rounded-full hover:bg-red-600 shadow-lg z-[101]">
                                 <Icons.XIcon size={28}/>
                             </button>
-                            
                             <img src={previewImage} className="max-w-full max-h-[80vh] rounded-lg shadow-2xl object-contain mb-4" onClick={(e) => e.stopPropagation()}/>
-                            
-                            {/* Tombol Tutup Bawah (Helper) */}
+                            {/* Tombol Tutup Bawah */}
                             <button onClick={() => setPreviewImage(null)} className="bg-white text-slate-900 px-6 py-3 rounded-full font-bold shadow-lg z-[101]">
                                 Tutup Gambar
                             </button>
@@ -661,12 +666,11 @@
             const currentDateGregorian = getGregorianDate(studentProfile.startDateRamadan || '2026-02-18', activeDay);
             const triggerConfetti = () => { setShowConfetti(true); setTimeout(() => setShowConfetti(false), 3000); };
             
-            // ------------- FIX: USER-SPECIFIC STORAGE (KEY BASED ON URL & NAME) ----------------
-            // Generate Unique Storage Key based on Teacher Link (Class ID) AND Student Name
+            // ------------- USER-SPECIFIC STORAGE ----------------
             const getStorageKey = (type) => {
                 const id = generateStorageID(studentProfile.scriptUrl);
                 const nameKey = studentName ? studentName.trim().toLowerCase().replace(/\s+/g, '_') : 'guest';
-                return `ramadan_${type}_${id}_${nameKey}`; // e.g. ramadan_userData_x7z9q_ahmad
+                return `ramadan_${type}_${id}_${nameKey}`; 
             };
             
             // LOAD Data when Component Mounts
@@ -678,7 +682,6 @@
                     if (savedData) {
                         setUserData(JSON.parse(savedData));
                     } else {
-                        // Init new empty data for this NEW STUDENT in this CLASS
                         const init = {}; 
                         for(let i=1; i<=30; i++) { init[i] = { puasa: false, tarawih: false, validated: false }; }
                         setUserData(init);
@@ -695,29 +698,26 @@
             }, [userData, studentProfile.scriptUrl, studentProfile.name]);
             // ---------------------------------------------------------
 
-            // CHECK SUBMISSIONS FOR CURRENT DAY (SERVER + LOCAL MERGE - PERSISTENT)
+            // PERBAIKAN: CEK STATUS SUBMIT INDEPENDEN (Hanya mengecek teks rincian yang relevan)
             const isJournalSubmitted = useMemo(() => {
                 if (userData[activeDay]?.submitted_journal) return true;
                 if (!raportData) return false;
-                const currentDayData = raportData.filter(d => parseInt(d.hari) === activeDay);
-                return currentDayData.some(d => (!d.audio || d.audio.length < 50) && (!d.foto || d.foto.length < 50));
+                return raportData.some(d => parseInt(d.hari) === activeDay && !(d.rincian || d.kebaikan || "").includes('🎤') && !(d.rincian || d.kebaikan || "").includes('📸'));
             }, [raportData, activeDay, userData]);
 
             const isAudioSubmitted = useMemo(() => {
                 if (userData[activeDay]?.submitted_audio) return true;
                 if (!raportData) return false;
-                const currentDayData = raportData.filter(d => parseInt(d.hari) === activeDay);
-                return currentDayData.some(d => d.audio && d.audio.length > 50);
+                return raportData.some(d => parseInt(d.hari) === activeDay && (d.rincian || d.kebaikan || "").includes('🎤'));
             }, [raportData, activeDay, userData]);
 
             const isPhotoSubmitted = useMemo(() => {
                 if (userData[activeDay]?.submitted_photo) return true;
                 if (!raportData) return false;
-                const currentDayData = raportData.filter(d => parseInt(d.hari) === activeDay);
-                return currentDayData.some(d => d.foto && d.foto.length > 50);
+                return raportData.some(d => parseInt(d.hari) === activeDay && (d.rincian || d.kebaikan || "").includes('📸'));
             }, [raportData, activeDay, userData]);
 
-            // PERBAIKAN: OTOMATIS CENTANG KETIKA MURID MENGETIK AMALAN LAIN
+            // OTOMATIS CENTANG KETIKA MURID MENGETIK AMALAN LAIN
             const updateField = (day, field, value) => { 
                 if (userData[day]?.submitted_journal) return; 
                 setUserData(prev => {
@@ -939,23 +939,23 @@ if (dayData.amalanLainCheck3) score += 5; if (dayData.hafalDoa) score += 10; if 
 
             // --- PERBAIKAN FITUR LOMPAT KE HARI BERIKUTNYA ---
             useEffect(() => {
-                if (view === 'journal') {
+                if (raportData) {
                     let targetDay = 1;
                     for (let i = 1; i <= 30; i++) {
-                        // Cek apakah hari ini sudah disubmit secara lokal
-                        const isSubmittedLocally = userData[i] && userData[i].submitted_journal;
-                        // Cek apakah hari ini sudah ada di server (yang bertipe jurnal)
-                        const isSubmittedServer = raportData && raportData.some(d => parseInt(d.hari) === i && (!d.audio || d.audio.length < 50) && (!d.foto || d.foto.length < 50));
+                        const loc = userData[i] && userData[i].submitted_journal;
+                        const srv = raportData.some(d => parseInt(d.hari) === i && !(d.rincian || d.kebaikan || "").includes('🎤') && !(d.rincian || d.kebaikan || "").includes('📸'));
                         
-                        if (isSubmittedLocally || isSubmittedServer) {
-                            targetDay = i < 30 ? i + 1 : 30; // Lanjut cek hari berikutnya
+                        if (loc || srv) {
+                            targetDay = i < 30 ? i + 1 : 30; 
                         } else {
-                            break; // Berhenti di hari pertama yang masih kosong / belum disubmit
+                            break;
                         }
                     }
                     setActiveDay(targetDay);
                 }
-            }, [view, raportData]);
+                // Hanya jalankan ketika data rapot baru diambil/diupdate (bukan setiap kali klik tab)
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+            }, [raportData.length]); 
             // --------------------------------------
 
             // --- KAMUS TEMA WARNA ---
@@ -1049,8 +1049,19 @@ if (dayData.amalanLainCheck3) score += 5; if (dayData.hafalDoa) score += 10; if 
                             ))}
                         </div>
 
+                        {/* NAVIGASI HARI DIKELUARKAN AGAR TERLIHAT DI JURNAL, HAFALAN, & GAMBAR */}
+                        {['journal', 'hafalan', 'achievements'].includes(view) && (
+                            <div className="flex items-center justify-between bg-white p-2 rounded-xl shadow-sm border border-slate-200 mb-4 animate-in fade-in">
+                                <button onClick={() => setActiveDay(d => Math.max(1, d - 1))} className="p-2 bg-slate-50 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100"><Icons.ChevronLeft size={16}/></button>
+                                <div className="text-center">
+                                    <div className="font-bold text-slate-800">Hari ke-{activeDay}</div>
+                                    <div className="text-[10px] text-slate-500">{currentDateGregorian}</div>
+                                </div>
+                                <button onClick={() => setActiveDay(d => Math.min(30, d + 1))} className="p-2 bg-slate-50 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100"><Icons.ChevronRight size={16}/></button>
+                            </div>
+                        )}
+
                         {view === 'journal' && (<div className={`space-y-4 animate-in fade-in ${isJournalSubmitted ? 'opacity-80' : ''}`}>
-                            <div className="flex items-center justify-between bg-white p-2 rounded-xl shadow-sm border border-slate-200"><button onClick={() => setActiveDay(d => Math.max(1, d - 1))} className="p-2 bg-slate-50 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100"><Icons.ChevronLeft size={16}/></button><div className="text-center"><div className="font-bold text-slate-800">Hari ke-{activeDay}</div><div className="text-[10px] text-slate-500">{currentDateGregorian}</div></div><button onClick={() => setActiveDay(d => Math.min(30, d + 1))} className="p-2 bg-slate-50 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100"><Icons.ChevronRight size={16}/></button></div>
                             {userData[activeDay]?.validated && <div className="bg-green-100 text-green-700 p-2 rounded-lg text-xs font-bold text-center border border-green-200">✅ Data sudah divalidasi</div>}
                             {isJournalSubmitted && <div className="bg-blue-100 text-blue-700 p-2 rounded-lg text-xs font-bold text-center border border-blue-200">🔒 Laporan Hari Ini Telah Dikirim</div>}
                             
