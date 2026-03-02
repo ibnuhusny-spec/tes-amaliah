@@ -428,7 +428,7 @@
                         <div className="space-y-3">
                             <button onClick={handleStudentEnter} className="w-full bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-bold py-4 rounded-xl flex items-center justify-center gap-3 transition-transform active:scale-95 shadow-lg border-b-4 border-yellow-600"><Icons.User size={24} /> Masuk sebagai Murid</button>
                         </div>
-                        <div className="mt-8 pt-4 border-t border-white/10"><p className="text-[10px] text-emerald-200/60">Versi Final 9.9 (Bypass Drive Security)</p></div>
+                        <div className="mt-8 pt-4 border-t border-white/10"><p className="text-[10px] text-emerald-200/60">Versi Final 10.0 (Clear Media Locks & Buttons)</p></div>
                     </div>
 
                     {/* PIN PROMPT */}
@@ -488,7 +488,6 @@
             const [saving, setSaving] = useState(false);
             const [errorMsg, setErrorMsg] = useState('');
             const [activeTab, setActiveTab] = useState('jurnal');
-            const [previewImage, setPreviewImage] = useState(null); // LIGHTBOX STATE
 
             useEffect(() => { fetchData(); }, []);
 
@@ -535,11 +534,10 @@
                 if (navigator.clipboard) { navigator.clipboard.writeText(magicLink).then(() => alert("✨ Link Ajaib Tersalin!\n\nLink ini sudah berisi: \n1. Koneksi Database\n2. Nama Sekolah ("+schoolName+")\n\nMurid tinggal klik dan pakai!")).catch(() => prompt("Salin manual:", magicLink)); } else { prompt("Salin link:", magicLink); }
             };
 
-            // PERBAIKAN FILTER: Deteksi lebih akurat berdasarkan isi teks dan link 
+            // PERBAIKAN FILTER
             const getFilteredData = () => {
                 return data.filter(item => {
                     const text = item.rincian || item.kebaikan || "";
-                    // Memastikan file yang mengandung link drive masuk ke tab yang tepat
                     const isHafalan = text.includes('🎤') || (item.audio && item.audio !== "-" && item.audio.length > 10);
                     const isGaleri = text.includes('📸') || (item.foto && item.foto !== "-" && item.foto.length > 10);
 
@@ -590,29 +588,39 @@
                                 <div className="flex justify-between items-start mb-2"><div><h3 className="font-bold text-slate-800 flex items-center gap-2">{item.nama} <span className="text-[10px] bg-slate-100 px-1 rounded text-slate-500">#{item.rowIndex}</span></h3><p className="text-xs text-slate-500">Hari ke-{item.hari} • {item.kelas}</p></div>{activeTab === 'jurnal' && <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-1 rounded-full border border-yellow-200">{item.poin} Poin (Auto)</span>}</div>
                                 {activeTab === 'jurnal' && <div className="bg-slate-50 p-2 rounded-lg text-xs text-slate-600 mb-3 font-mono border border-slate-100">{item.rincian || item.kebaikan}</div>}
                                 
-                                {/* TAMPILAN AUDIO DI PERLEBAR, HANYA MENGGUNAKAN LINK VALID DARI SCRIPT */}
-                                {activeTab === 'hafalan' && <div className="mb-3">
-                                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 flex flex-col gap-2 mb-2">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2"><Icons.Play size={14} className="text-blue-600"/><span className="text-xs font-bold text-blue-700">Putar Audio</span></div>
-                                            {item.audio && item.audio !== "-" && <a href={getValidMediaUrl(item.audio)} target="_blank" rel="noreferrer" className="text-[10px] bg-blue-600 text-white px-3 py-1 rounded-full font-bold shadow-sm flex items-center gap-1 hover:bg-blue-700"><Icons.Link size={10}/> Buka File</a>}
+                                {/* TAMPILAN AUDIO DIUBAH JADI TOMBOL DIRECT LINK */}
+                                {activeTab === 'hafalan' && (
+                                    <div className="mb-3 bg-blue-50 border border-blue-200 p-3 rounded-xl">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-xs font-bold text-blue-800 flex items-center gap-1"><Icons.Mic size={14}/> Rekaman Suara</span>
                                         </div>
-                                        {item.audio && item.audio !== "-" && <audio controls src={getValidMediaUrl(item.audio)} className="h-10 w-full rounded" />}
-                                        <p className="text-[9px] text-blue-500 text-center">Jika tidak bisa diputar, klik tombol "Buka File" di atas.</p>
+                                        {item.audio && item.audio !== "-" ? (
+                                            <a href={getValidMediaUrl(item.audio)} target="_blank" rel="noreferrer" className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center gap-2 text-sm font-bold shadow-sm transition">
+                                                <Icons.Play size={16}/> Buka Rekaman (Drive)
+                                            </a>
+                                        ) : (
+                                            <span className="text-xs text-slate-400 italic">File rekaman tidak tersedia.</span>
+                                        )}
+                                        <div className="mt-2 text-[10px] text-slate-500 italic truncate border-t border-blue-100 pt-2">{item.rincian || item.kebaikan}</div>
                                     </div>
-                                    <div className="text-[10px] text-slate-500 italic truncate">{item.rincian || item.kebaikan}</div>
-                                </div>}
+                                )}
                                 
-                                {/* LINK GAMBAR LANGSUNG BUKA TAB BARU, HANYA MENGGUNAKAN LINK VALID DARI SCRIPT */}
-                                {activeTab === 'galeri' && <div className="mb-3">
-                                    {item.foto && item.foto !== "-" && <a href={getValidMediaUrl(item.foto)} target="_blank" rel="noreferrer" className="relative group block cursor-pointer">
-                                        <img src={getValidMediaUrl(item.foto)} alt="Bukti" className="w-full h-48 rounded-lg border border-slate-200 object-cover mb-2 transition group-hover:opacity-80 bg-slate-100" />
-                                        <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 bg-black/30 rounded-lg transition mb-2">
-                                            <span className="bg-black/70 text-white text-xs font-bold px-4 py-2 rounded-full flex items-center gap-2 backdrop-blur-sm"><Icons.Link size={14}/> Buka Gambar Penuh</span>
+                                {/* TAMPILAN FOTO DIUBAH JADI TOMBOL DIRECT LINK */}
+                                {activeTab === 'galeri' && (
+                                    <div className="mb-3 bg-slate-50 border border-slate-200 p-3 rounded-xl">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-xs font-bold text-slate-800 flex items-center gap-1"><Icons.Camera size={14}/> Bukti Gambar</span>
                                         </div>
-                                    </a>}
-                                    <div className="text-[10px] text-slate-500 italic">{item.rincian || item.kebaikan}</div>
-                                </div>}
+                                        {item.foto && item.foto !== "-" ? (
+                                            <a href={getValidMediaUrl(item.foto)} target="_blank" rel="noreferrer" className="w-full py-3 bg-slate-700 hover:bg-slate-800 text-white rounded-lg flex items-center justify-center gap-2 text-sm font-bold shadow-sm transition">
+                                                <Icons.Image size={16}/> Lihat Gambar (Drive)
+                                            </a>
+                                        ) : (
+                                            <span className="text-xs text-slate-400 italic">File gambar tidak tersedia.</span>
+                                        )}
+                                        <div className="mt-2 text-[10px] text-slate-500 italic border-t border-slate-200 pt-2">{item.rincian || item.kebaikan}</div>
+                                    </div>
+                                )}
                                 
                                 <div className="border-t pt-2 mt-2 flex justify-between items-center">
                                     <div className="text-xs">
@@ -629,8 +637,6 @@
                             ))}
                         </div>
                     </div>
-                    
-                    {/* LIGHTBOX DITIADAKAN AGAR MURID/GURU LANGSUNG MELIHAT GAMBAR HD DI DRIVE */}
 
                     {selectedStudent && (<div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"><div className="bg-white w-[90%] max-w-sm rounded-2xl p-6 shadow-2xl relative"><button onClick={() => setSelectedStudent(null)} className="absolute top-4 right-4 bg-slate-100 p-1 rounded-full"><Icons.XIcon size={20} className="text-slate-500"/></button><h3 className="font-bold text-lg mb-1 text-slate-800">Beri Nilai</h3><p className="text-xs text-slate-500 mb-4">{selectedStudent.nama} • {selectedStudent.rowIndex}</p><div className="space-y-4 mb-6"><div><label className="text-xs font-bold text-slate-500 block mb-1">Nilai Guru</label><input type="text" value={nilaiInput} onChange={(e) => setNilaiInput(e.target.value)} className="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Contoh: 100" /></div><div><label className="text-xs font-bold text-slate-500 block mb-1">Koreksi</label><textarea rows="3" value={koreksiInput} onChange={(e) => setKoreksiInput(e.target.value)} className="w-full p-3 bg-slate-50 border rounded-xl text-sm" /></div></div><button onClick={handleSimpanNilai} disabled={saving} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold flex justify-center items-center gap-2">{saving ? <Icons.Loader2 className="animate-spin"/> : <Icons.CheckSquare size={18}/>} Simpan</button></div></div>)}
                 </div>
@@ -667,6 +673,9 @@
             const mediaRecorderRef = useRef(null);
             const [raportData, setRaportData] = useState([]);
             const [loadingRaport, setLoadingRaport] = useState(false);
+            
+            // TRANSIENT LOCK: Kunci sementara langsung setelah tombol kirim dipencet
+            const [localLocks, setLocalLocks] = useState({});
 
             const currentDateGregorian = getGregorianDate(studentProfile.startDateRamadan || '2026-02-18', activeDay);
             const triggerConfetti = () => { setShowConfetti(true); setTimeout(() => setShowConfetti(false), 3000); };
@@ -703,26 +712,32 @@
             }, [userData, studentProfile.scriptUrl, studentProfile.name]);
             // ---------------------------------------------------------
 
-            const isJournalSubmitted = useMemo(() => {
-                if (userData[activeDay]?.submitted_journal) return true;
+            // PERBAIKAN LOCK SYSTEM: Hanya mengandalkan Raport (Data Server) & LocalLock Sementara. 
+            // LocalStorage (userData.submitted) tidak dipakai mengunci lagi, sehingga kalau Sheet dikosongkan, App akan Terbuka
+            const isDayJournalSubmitted = (day) => {
+                if (localLocks[`${day}_journal`]) return true;
                 if (!raportData) return false;
-                return raportData.some(d => parseInt(d.hari) === activeDay && !(d.rincian || d.kebaikan || "").includes('🎤') && !(d.rincian || d.kebaikan || "").includes('📸'));
-            }, [raportData, activeDay, userData]);
+                return raportData.some(d => parseInt(d.hari) === day && !(d.rincian || d.kebaikan || "").includes('🎤') && !(d.rincian || d.kebaikan || "").includes('📸'));
+            };
 
-            const isAudioSubmitted = useMemo(() => {
-                if (userData[activeDay]?.submitted_audio) return true;
+            const isDayAudioSubmitted = (day) => {
+                if (localLocks[`${day}_audio`]) return true;
                 if (!raportData) return false;
-                return raportData.some(d => parseInt(d.hari) === activeDay && (d.rincian || d.kebaikan || "").includes('🎤'));
-            }, [raportData, activeDay, userData]);
+                return raportData.some(d => parseInt(d.hari) === day && (d.rincian || d.kebaikan || "").includes('🎤'));
+            };
 
-            const isPhotoSubmitted = useMemo(() => {
-                if (userData[activeDay]?.submitted_photo) return true;
+            const isDayPhotoSubmitted = (day) => {
+                if (localLocks[`${day}_photo`]) return true;
                 if (!raportData) return false;
-                return raportData.some(d => parseInt(d.hari) === activeDay && (d.rincian || d.kebaikan || "").includes('📸'));
-            }, [raportData, activeDay, userData]);
+                return raportData.some(d => parseInt(d.hari) === day && (d.rincian || d.kebaikan || "").includes('📸'));
+            };
+
+            const isJournalSubmitted = isDayJournalSubmitted(activeDay);
+            const isAudioSubmitted = isDayAudioSubmitted(activeDay);
+            const isPhotoSubmitted = isDayPhotoSubmitted(activeDay);
 
             const updateField = (day, field, value) => { 
-                if (userData[day]?.submitted_journal) return; 
+                if (isDayJournalSubmitted(day)) return; 
                 setUserData(prev => {
                     const dayData = prev[day] || {};
                     let updates = { [field]: value };
@@ -741,14 +756,14 @@
             };
             
             const toggleCheck = (day, field) => { 
-                if (userData[day]?.validated || userData[day]?.submitted_journal) return; 
+                if (userData[day]?.validated || isDayJournalSubmitted(day)) return; 
                 setUserData(prev => {
                     const dayData = prev[day] || {};
                     return { ...prev, [day]: { ...dayData, [field]: !dayData[field] } };
                 });
             };
             const togglePuasa = (type) => {
-                if (userData[activeDay]?.validated || userData[activeDay]?.submitted_journal) return;
+                if (userData[activeDay]?.validated || isDayJournalSubmitted(activeDay)) return;
                 setUserData(prev => {
                     const dayData = prev[activeDay] || {};
                     return { ...prev, [activeDay]: { ...dayData, puasaPenuh: type === 'penuh' ? !dayData.puasaPenuh : false, puasaSetengah: type === 'setengah' ? !dayData.puasaSetengah : false } };
@@ -849,7 +864,7 @@
 
                 // 2. Tambahkan poin lokal yang SEDANG DIKERJAKAN tapi BELUM DISUBMIT
                 for (let i = 1; i <= 30; i++) {
-                    if (!submittedDays.has(i) && userData[i] && !userData[i].submitted_journal) {
+                    if (!submittedDays.has(i) && userData[i] && !isDayJournalSubmitted(i)) {
                         total += calculateDailyScore(userData[i], i);
                     }
                 }
@@ -952,23 +967,13 @@
                     triggerConfetti();
                     alert("Terkirim! Guru akan segera menerima datamu."); 
                 
-                    // SAVE PERSISTENT LOCK TO LOCAL STORAGE
-                    setUserData(prev => {
-                        const currentDayData = prev[activeDay] || {};
-                        let updates = {};
-                        if(view==='hafalan') { 
-                            deleteRecording(); 
-                            updates = { submitted_audio: true }; 
-                        }
-                        else if(view==='achievements') { 
-                            removeImage(); 
-                            updates = { submitted_photo: true }; 
-                        }
-                        else { 
-                            updates = { submitted_journal: true }; 
-                        }
-                        return { ...prev, [activeDay]: { ...currentDayData, ...updates } };
-                    });
+                    // APPLY TRANSIENT LOCK (Kunci Sementara hingga Data Teredirect Ulang)
+                    let lockType = view === 'hafalan' ? 'audio' : view === 'achievements' ? 'photo' : 'journal';
+                    setLocalLocks(prev => ({ ...prev, [`${activeDay}_${lockType}`]: true }));
+
+                    // Hapus file dari memori setelah dikirim
+                    if(view === 'hafalan') deleteRecording();
+                    if(view === 'achievements') removeImage();
                 
                     fetchRaport(); 
 
@@ -994,14 +999,12 @@
             useEffect(() => { fetchRaport(); }, [studentProfile.scriptUrl]);
             useEffect(() => { if (view === 'raport') fetchRaport(); }, [view]);
 
+            // AUTO JUMP HARI: Hanya akan melompat jika data server untuk jurnal hari tersebut sudah terisi
             useEffect(() => {
                 if (raportData) {
                     let targetDay = 1;
                     for (let i = 1; i <= 30; i++) {
-                        const loc = userData[i] && userData[i].submitted_journal;
-                        const srv = raportData.some(d => parseInt(d.hari) === i && !(d.rincian || d.kebaikan || "").includes('🎤') && !(d.rincian || d.kebaikan || "").includes('📸'));
-                        
-                        if (loc || srv) {
+                        if (isDayJournalSubmitted(i)) {
                             targetDay = i < 30 ? i + 1 : 30; 
                         } else {
                             break;
@@ -1187,32 +1190,36 @@
                             ))}
                         </div>)}
                         
-                        {/* TAMPILAN DI RAPORT JUGA MENGGUNAKAN GETDIRECTURL DAN TOMBOL BUKA KE DRIVE SEBAGAI CADANGAN */}
+                        {/* TAMPILAN DI RAPORT JUGA MENGGUNAKAN TOMBOL DRIVE */}
                         {view === 'raport' && (<div className="space-y-3 pb-10"><h2 className={`font-bold ${theme.textMain} flex items-center gap-2 mb-2`}><Icons.FileText size={18}/> Riwayat & Nilai</h2>{loadingRaport ? <div className="text-center text-slate-400 py-4">Mengambil data...</div> : raportData.length === 0 ? <div className="text-center text-slate-400 py-4 bg-white rounded-xl border border-slate-200">Belum ada data nilai.</div> : raportData.map((item, idx) => {
                                 const isMedia = (item.audio && item.audio.length > 10 && item.audio !== "-") || (item.foto && item.foto.length > 10 && item.foto !== "-");
                                 return (
                                 <div key={idx} className={`bg-white p-4 rounded-xl shadow-sm border-l-4 ${theme.activeTab.split(' ')[2]} border border-slate-100`}>
                                     <div className="flex justify-between text-xs text-slate-500 mb-2"><span>Hari ke-{item.hari}</span><span>{new Date(item.waktu).toLocaleDateString()}</span></div>
                                     
-                                    {item.audio && item.audio.length > 10 && item.audio !== "-" && <div className="mb-3">
-                                        <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 flex flex-col gap-2 mb-2">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2"><Icons.Play size={14} className="text-blue-600"/><span className="text-xs font-bold text-blue-700">Setoran Audio</span></div>
-                                                <a href={getValidMediaUrl(item.audio)} target="_blank" rel="noreferrer" className="text-[10px] bg-blue-600 text-white px-3 py-1 rounded-full font-bold shadow-sm flex items-center gap-1 hover:bg-blue-700"><Icons.Link size={10}/> Buka File</a>
+                                    {/* TOMBOL BUKA AUDIO DI DRIVE */}
+                                    {item.audio && item.audio.length > 10 && item.audio !== "-" && (
+                                        <div className="mb-3 bg-blue-50 border border-blue-200 p-3 rounded-xl">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-xs font-bold text-blue-800 flex items-center gap-1"><Icons.Mic size={14}/> Rekaman Suara</span>
                                             </div>
-                                            <audio controls src={getValidMediaUrl(item.audio)} className="h-10 w-full rounded" />
-                                            <p className="text-[9px] text-blue-500 text-center">Jika tidak bisa diputar, klik tombol "Buka File".</p>
+                                            <a href={getValidMediaUrl(item.audio)} target="_blank" rel="noreferrer" className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center gap-2 text-xs font-bold shadow-sm transition">
+                                                <Icons.Play size={14}/> Buka Rekaman (Drive)
+                                            </a>
                                         </div>
-                                    </div>}
+                                    )}
                                     
-                                    {item.foto && item.foto.length > 10 && item.foto !== "-" && <div className="mb-3">
-                                        <a href={getValidMediaUrl(item.foto)} target="_blank" rel="noreferrer" className="relative group block cursor-pointer">
-                                            <img src={getValidMediaUrl(item.foto)} alt="Bukti" className="w-full h-48 rounded-lg border border-slate-200 object-cover mb-2 transition group-hover:opacity-80 bg-slate-100" />
-                                            <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 bg-black/30 rounded-lg transition mb-2">
-                                                <span className="bg-black/70 text-white text-xs font-bold px-4 py-2 rounded-full flex items-center gap-2 backdrop-blur-sm"><Icons.Link size={14}/> Buka Gambar Penuh</span>
+                                    {/* TOMBOL BUKA FOTO DI DRIVE */}
+                                    {item.foto && item.foto.length > 10 && item.foto !== "-" && (
+                                        <div className="mb-3 bg-slate-50 border border-slate-200 p-3 rounded-xl">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-xs font-bold text-slate-800 flex items-center gap-1"><Icons.Camera size={14}/> Bukti Gambar</span>
                                             </div>
-                                        </a>
-                                    </div>}
+                                            <a href={getValidMediaUrl(item.foto)} target="_blank" rel="noreferrer" className="w-full py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg flex items-center justify-center gap-2 text-xs font-bold shadow-sm transition">
+                                                <Icons.Image size={14}/> Lihat Gambar (Drive)
+                                            </a>
+                                        </div>
+                                    )}
                                     
                                     <div className="font-bold text-slate-800 text-sm mb-1">{item.rincian || item.kebaikan || 'Laporan Harian'}</div>
                                     
@@ -1227,14 +1234,13 @@
                                 </div>
                             )})} 
                         </div>)}
+                        
                         {view === 'achievements' && (<div className={`bg-white p-5 rounded-2xl shadow-sm text-center border border-slate-200 ${isPhotoSubmitted ? 'opacity-80 pointer-events-none' : ''}`}><h2 className="text-lg font-bold mb-1">Lapor Gambar</h2><p className="text-xs text-slate-500 mb-4">Kirim foto kegiatan Ramadan.</p><div className="mb-4 text-left p-3 bg-slate-50 rounded-xl border border-dashed border-slate-300"><label className="text-xs font-bold text-slate-400 block mb-2">Upload Foto</label>{!selectedImage ? <label className="flex items-center justify-center h-20 cursor-pointer hover:bg-slate-100 transition rounded-lg"><Icons.Camera className="text-slate-300 mr-2"/><span className="text-xs text-slate-400">Ambil Foto</span><input type="file" accept="image/*" className="hidden" onChange={handleImageUpload}/></label> : <div className="flex items-center justify-between"><span className="text-xs truncate max-w-[150px]">{selectedImage}</span><button onClick={removeImage} className="text-red-500 p-2 hover:bg-red-50 rounded-full"><Icons.XIcon size={16}/></button></div>}</div>
                         <button onClick={sendData} disabled={isSubmitting || isPhotoSubmitted} className={`w-full text-white font-bold py-3 rounded-xl shadow-lg flex justify-center items-center gap-2 transition transform active:scale-95 border ${isPhotoSubmitted ? 'bg-slate-400 border-slate-500 cursor-not-allowed' : theme.btn}`}>
                             {isSubmitting ? <Icons.Loader2 className="animate-spin"/> : isPhotoSubmitted ? <Icons.CheckCircle/> : <Icons.CloudUpload/>} 
                             {isPhotoSubmitted ? 'Sudah Dikirim Hari Ini' : 'Kirim Foto'}
                         </button></div>)}
                     </div>
-                    
-                    {/* LIGHTBOX UNTUK GAMBAR DIHAPUS, DIGANTI DENGAN LINK LANGSUNG KE GOOGLE DRIVE */}
 
                     {showConfetti && <div className="fixed inset-0 flex items-center justify-center z-50 text-6xl animate-bounce">🎉</div>}
                 </div>
