@@ -488,6 +488,7 @@
             const [saving, setSaving] = useState(false);
             const [errorMsg, setErrorMsg] = useState('');
             const [activeTab, setActiveTab] = useState('jurnal');
+            const [previewImage, setPreviewImage] = useState(null);
 
             useEffect(() => { fetchData(); }, []);
 
