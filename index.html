@@ -693,6 +693,7 @@
             
             // KUNCI SEMENTARA UNTUK MENCEGAH DOUBLE SUBMIT
             const [localLocks, setLocalLocks] = useState({});
+            const [previewImage, setPreviewImage] = useState(null);
 
             const currentDateGregorian = getGregorianDate(studentProfile.startDateRamadan || '2026-02-18', activeDay);
             const triggerConfetti = () => { setShowConfetti(true); setTimeout(() => setShowConfetti(false), 3000); };
