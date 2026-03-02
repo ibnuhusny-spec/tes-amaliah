@@ -420,7 +420,7 @@
                         <div className="space-y-3">
                             <button onClick={handleStudentEnter} className="w-full bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-bold py-4 rounded-xl flex items-center justify-center gap-3 transition-transform active:scale-95 shadow-lg border-b-4 border-yellow-600"><Icons.User size={24} /> Masuk sebagai Murid</button>
                         </div>
-                        <div className="mt-8 pt-4 border-t border-white/10"><p className="text-[10px] text-emerald-200/60">Versi Final 9.3 (Fix Ganti Akun)</p></div>
+                        <div className="mt-8 pt-4 border-t border-white/10"><p className="text-[10px] text-emerald-200/60">Versi Final 9.4 (Fix Poin & Autojump)</p></div>
                     </div>
 
                     {/* PIN PROMPT */}
@@ -533,11 +533,24 @@
                 // Jurnal = yang BUKAN audio dan BUKAN foto
                 return data.filter(item => (!item.audio || item.audio.length <= 50) && (!item.foto || item.foto.length <= 50)); 
             };
+            
+            // FUNGSI KELUAR DENGAN KONFIRMASI
+            const handleLogout = () => {
+                if(window.confirm("Yakin ingin keluar dari Dashboard Guru?")) {
+                    setRole('home');
+                }
+            };
 
             return (
                 <div className="h-full bg-slate-50 font-sans flex flex-col overflow-hidden">
                     <div className="bg-white p-4 shadow-sm z-10 shrink-0">
-                        <div className="flex justify-between items-center mb-4"><h1 className="font-bold text-lg text-slate-700 flex items-center gap-2"><Icons.Award className="text-emerald-600"/> Dashboard Guru</h1><button onClick={fetchData} className="p-2 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100"><Icons.Loader2 size={18} className={loading ? "animate-spin" : ""} /></button></div>
+                        <div className="flex justify-between items-center mb-4">
+                            <h1 className="font-bold text-lg text-slate-700 flex items-center gap-2"><Icons.Award className="text-emerald-600"/> Dashboard Guru</h1>
+                            <div className="flex gap-2">
+                                <button onClick={fetchData} className="p-2 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100 hover:bg-emerald-100 transition"><Icons.Loader2 size={18} className={loading ? "animate-spin" : ""} /></button>
+                                <button onClick={handleLogout} className="p-2 bg-red-50 text-red-600 rounded-full border border-red-100 hover:bg-red-100 transition"><Icons.LogOut size={18} /></button>
+                            </div>
+                        </div>
                         <div className="flex bg-slate-100 p-1 rounded-xl">
                             {['jurnal', 'hafalan', 'galeri'].map(tab => (
                                 <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 py-2 text-xs font-bold rounded-lg capitalize flex items-center justify-center gap-1 transition-all ${activeTab === tab ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
@@ -605,7 +618,6 @@
                     )}
 
                     {selectedStudent && (<div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"><div className="bg-white w-[90%] max-w-sm rounded-2xl p-6 shadow-2xl relative"><button onClick={() => setSelectedStudent(null)} className="absolute top-4 right-4 bg-slate-100 p-1 rounded-full"><Icons.XIcon size={20} className="text-slate-500"/></button><h3 className="font-bold text-lg mb-1 text-slate-800">Beri Nilai</h3><p className="text-xs text-slate-500 mb-4">{selectedStudent.nama} • {selectedStudent.rowIndex}</p><div className="space-y-4 mb-6"><div><label className="text-xs font-bold text-slate-500 block mb-1">Nilai Guru</label><input type="text" value={nilaiInput} onChange={(e) => setNilaiInput(e.target.value)} className="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Contoh: 100" /></div><div><label className="text-xs font-bold text-slate-500 block mb-1">Koreksi</label><textarea rows="3" value={koreksiInput} onChange={(e) => setKoreksiInput(e.target.value)} className="w-full p-3 bg-slate-50 border rounded-xl text-sm" /></div></div><button onClick={handleSimpanNilai} disabled={saving} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold flex justify-center items-center gap-2">{saving ? <Icons.Loader2 className="animate-spin"/> : <Icons.CheckSquare size={18}/>} Simpan</button></div></div>)}
-                    <button onClick={() => setRole('home')} className="fixed bottom-4 right-4 bg-red-500 text-white p-3 rounded-full shadow-lg border border-red-600 z-50"><Icons.LogOut size={20}/></button>
                 </div>
             );
         }
@@ -705,13 +717,26 @@
                 return currentDayData.some(d => d.foto && d.foto.length > 50);
             }, [raportData, activeDay, userData]);
 
+            // PERBAIKAN: OTOMATIS CENTANG KETIKA MURID MENGETIK AMALAN LAIN
             const updateField = (day, field, value) => { 
                 if (userData[day]?.submitted_journal) return; 
                 setUserData(prev => {
                     const dayData = prev[day] || {};
-                    return { ...prev, [day]: { ...dayData, [field]: value } };
+                    let updates = { [field]: value };
+                    
+                    if (field.startsWith('amalanLain') && !field.includes('Check')) {
+                        const num = field.replace('amalanLain', '');
+                        if (value.trim().length > 0) {
+                            updates[`amalanLainCheck${num}`] = true;
+                        } else {
+                            updates[`amalanLainCheck${num}`] = false;
+                        }
+                    }
+                    
+                    return { ...prev, [day]: { ...dayData, ...updates } };
                 });
             };
+            
             const toggleCheck = (day, field) => { 
                 if (userData[day]?.validated || userData[day]?.submitted_journal) return; 
                 setUserData(prev => {
@@ -751,7 +776,9 @@
                 let score = 0; if (!dayData) return 0; 
                 if (dayData.puasaPenuh) score += 20; else if (dayData.puasaSetengah) score += 10;
                 if (dayData.subuh) score += 10; if (dayData.zuhur) score += 10; if (dayData.ashar) score += 10; if (dayData.maghrib) score += 10; if (dayData.isya) score += 10; 
-                if (dayData.tarawih) score += 10; if (dayData.witir) score += 10; if (dayData.tadarus) score += 10; if (dayData.salatMalam) { score += (dayIndex >= 21) ? 20 : 10; } if (dayData.bantuIbu) score += 5; if (dayData.kosakata) score += 5; if (dayData.amalanLainCheck) score += 5; if (dayData.hafalDoa) score += 10; if (dayData.namaPenceramah) score += 5; if (dayData.temaCeramah) score += 10; 
+                if (dayData.tarawih) score += 10; if (dayData.witir) score += 10; if (dayData.tadarus) score += 10; if (dayData.salatMalam) { score += (dayIndex >= 21) ? 20 : 10; } if (dayData.bantuIbu) score += 5; if (dayData.kosakata) score += 5; if (dayData.amalanLainCheck1) score += 5; 
+if (dayData.amalanLainCheck2) score += 5; 
+if (dayData.amalanLainCheck3) score += 5; if (dayData.hafalDoa) score += 10; if (dayData.namaPenceramah) score += 5; if (dayData.temaCeramah) score += 10; 
                 
                 // EVALUASI DIRI (MINUS POINTS)
                 if (dayData.eval_game) score -= 20;
@@ -766,45 +793,135 @@
             const calculateTotalLocalScore = () => { let score = 0; Object.entries(userData).forEach(([d, data]) => score += calculateDailyScore(data, parseInt(d))); return score; };
             
            const getDisplayScore = () => {
-    let serverScore = 0;
-    
-    // Hitung poin dari data yang ditarik dari server
-    if (raportData && raportData.length > 0) {
-        raportData.forEach(row => {
-            serverScore += (parseInt(row.poin) || 0); // Poin otomatis jurnal harian
-            serverScore += (parseInt(row.nilaiGuru) || 0); // Poin tambahan dari guru
-        });
-    }
+                let serverScore = 0;
+                if (raportData && raportData.length > 0) {
+                    raportData.forEach(row => {
+                        serverScore += (parseInt(row.poin) || 0); 
+                        serverScore += (parseInt(row.nilaiGuru) || 0); 
+                    });
+                }
+                return serverScore; 
+            };
 
-    return serverScore; 
-};
+            // ==========================================
+            // KODE SENDDATA
+            // ==========================================
+            const sendData = async () => {
+                if(!studentProfile.scriptUrl) return alert("Link Script Guru belum diisi! Hubungi gurumu.");
+                if(view === 'hafalan' && (!audioBlob || !namaSurah)) return alert("Rekam & isi nama surah dulu!");
+                
+                setIsSubmitting(true);
+                
+                try {
+                    const dayData = userData[activeDay] || {};
+                    let payload = {};
+                    
+                    if(view === 'hafalan') {
+                        const b64Audio = await blobToBase64(audioBlob);
+                        payload = { 
+                            action: 'lapor', 
+                            nama: studentProfile.name, 
+                            kelas: studentProfile.class, 
+                            hari: activeDay, 
+                            poin: 0, 
+                            puasa: dayData.puasaPenuh, 
+                            tarawih: dayData.tarawih, 
+                            kebaikan: `🎤 Hafalan: ${namaSurah}`, 
+                            audio: b64Audio, 
+                            namaSurah: namaSurah 
+                        };
+                    } else if(view === 'achievements') {
+                        payload = { 
+                            action: 'lapor', 
+                            nama: studentProfile.name, 
+                            kelas: studentProfile.class, 
+                            hari: activeDay, 
+                            poin: 0, 
+                            puasa: dayData.puasaPenuh, 
+                            tarawih: dayData.tarawih, 
+                            kebaikan: `📸 Foto: ${selectedImage || 'Kegiatan'}`, 
+                            foto: base64Image, 
+                            namaFoto: selectedImage 
+                        };
+                    } else {
+                        let rincian = []; 
+                        if(dayData.salatMalam) rincian.push("✅ Qiyam"); 
+                        if(dayData.bantuIbu) rincian.push("✅ Bantu Ortu"); 
+                        if(dayData.kosakata) rincian.push("✅ Kosakata"); 
+                        if(dayData.tarawih) rincian.push("✅ Tarawih"); 
+                        if(dayData.witir) rincian.push("✅ Witir"); 
+                        if(dayData.tadarus) rincian.push("✅ Tadarus"); 
+                        
+                        // Rincian Amalan Lain Ketikan
+                        if(dayData.amalanLainCheck1 && dayData.amalanLain1) rincian.push(`✅ ${dayData.amalanLain1}`);
+                        if(dayData.amalanLainCheck2 && dayData.amalanLain2) rincian.push(`✅ ${dayData.amalanLain2}`);
+                        if(dayData.amalanLainCheck3 && dayData.amalanLain3) rincian.push(`✅ ${dayData.amalanLain3}`);
+                        
+                        // Rincian Evaluasi
+                        let evaluasi = [];
+                        if(dayData.eval_game) evaluasi.push("Main Game");
+                        if(dayData.eval_tidur) evaluasi.push("Tidur");
+                        if(dayData.eval_nangis) evaluasi.push("Menangis");
+                        if(dayData.eval_batal) evaluasi.push("Batal Puasa");
+                        if(dayData.eval_lain) evaluasi.push(dayData.eval_lain_teks || "Lainnya");
+                        
+                        if(evaluasi.length > 0) rincian.push(`⚠️ Evaluasi: ${evaluasi.join(", ")}`);
+                        
+                        payload = { 
+                            action: 'lapor', 
+                            nama: studentProfile.name, 
+                            kelas: studentProfile.class, 
+                            hari: activeDay, 
+                            poin: calculateDailyScore(dayData, activeDay), 
+                            puasa: dayData.puasaPenuh, 
+                            tarawih: dayData.tarawih, 
+                            kebaikan: rincian.join(", "), 
+                            amalanLain1: dayData.amalanLainCheck1 ? (dayData.amalanLain1 || 'Amalan Tambahan 1') : "",
+                            amalanLain2: dayData.amalanLainCheck2 ? (dayData.amalanLain2 || 'Amalan Tambahan 2') : "",
+                            amalanLain3: dayData.amalanLainCheck3 ? (dayData.amalanLain3 || 'Amalan Tambahan 3') : "",
+                            foto: "-", 
+                            audio: "-" 
+                        }; 
+                    }
 
-            const sendData = async () => { if(!studentProfile.scriptUrl) return alert("Link Script Guru belum diisi! Hubungi gurumu."); if(view === 'hafalan' && (!audioBlob || !namaSurah)) return alert("Rekam & isi nama surah dulu!"); setIsSubmitting(true); try { const dayData = userData[activeDay] || {}; let payload = {}; if(view === 'hafalan') { const b64Audio = await blobToBase64(audioBlob); payload = { action: 'lapor', nama: studentProfile.name, kelas: studentProfile.class, hari: activeDay, poin: 0, puasa: dayData.puasaPenuh, tarawih: dayData.tarawih, kebaikan: `🎤 Hafalan: ${namaSurah}`, audio: b64Audio, namaSurah: namaSurah }; } else if(view === 'achievements') { payload = { action: 'lapor', nama: studentProfile.name, kelas: studentProfile.class, hari: activeDay, poin: 0, puasa: dayData.puasaPenuh, tarawih: dayData.tarawih, kebaikan: `📸 Foto: ${selectedImage || 'Kegiatan'}`, foto: base64Image, namaFoto: selectedImage }; } else { 
-                let rincian = []; if(dayData.salatMalam) rincian.push("✅ Qiyam"); if(dayData.bantuIbu) rincian.push("✅ Bantu Ortu"); if(dayData.kosakata) rincian.push("✅ Kosakata"); if(dayData.amalanLainCheck) rincian.push(`✅ ${dayData.amalanLain || 'Amalan Lain'}`); if(dayData.tarawih) rincian.push("✅ Tarawih"); if(dayData.witir) rincian.push("✅ Witir"); if(dayData.tadarus) rincian.push("✅ Tadarus"); 
+                    // LAKUKAN PENGIRIMAN (FETCH)
+                    await fetch(studentProfile.scriptUrl, { 
+                        method: 'POST', 
+                        mode: 'no-cors', 
+                        headers: { 'Content-Type': 'text/plain' }, 
+                        body: JSON.stringify(payload) 
+                    });
+                    
+                    triggerConfetti();
+                    alert("Terkirim! Guru akan segera menerima datamu."); 
                 
-                // Rincian Evaluasi
-                let evaluasi = [];
-                if(dayData.eval_game) evaluasi.push("Main Game");
-                if(dayData.eval_tidur) evaluasi.push("Tidur");
-                if(dayData.eval_nangis) evaluasi.push("Menangis");
-                if(dayData.eval_batal) evaluasi.push("Batal Puasa");
-                if(dayData.eval_lain) evaluasi.push(dayData.eval_lain_teks || "Lainnya");
+                    // SAVE PERSISTENT LOCK TO LOCAL STORAGE
+                    setUserData(prev => {
+                        const currentDayData = prev[activeDay] || {};
+                        let updates = {};
+                        if(view==='hafalan') { 
+                            deleteRecording(); 
+                            updates = { submitted_audio: true }; 
+                        }
+                        else if(view==='achievements') { 
+                            removeImage(); 
+                            updates = { submitted_photo: true }; 
+                        }
+                        else { 
+                            updates = { submitted_journal: true }; 
+                        }
+                        return { ...prev, [activeDay]: { ...currentDayData, ...updates } };
+                    });
                 
-                if(evaluasi.length > 0) rincian.push(`⚠️ Evaluasi: ${evaluasi.join(", ")}`);
-                
-                payload = { action: 'lapor', nama: studentProfile.name, kelas: studentProfile.class, hari: activeDay, poin: calculateDailyScore(dayData, activeDay), puasa: dayData.puasaPenuh, tarawih: dayData.tarawih, kebaikan: rincian.join(", "), foto: "-", audio: "-" }; } await fetch(studentProfile.scriptUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload) }); triggerConfetti(); alert("Terkirim! Guru akan segera menerima datamu."); 
-                
-                // SAVE PERSISTENT LOCK TO LOCAL STORAGE
-                setUserData(prev => {
-                    const dayData = prev[activeDay] || {};
-                    let updates = {};
-                    if(view==='hafalan') { deleteRecording(); updates = { submitted_audio: true }; }
-                    else if(view==='achievements') { removeImage(); updates = { submitted_photo: true }; }
-                    else { updates = { submitted_journal: true }; }
-                    return { ...prev, [activeDay]: { ...dayData, ...updates } };
-                });
-                
-                fetchRaport(); } catch(e) { alert("Gagal kirim. Cek internet atau link guru."); } finally { setIsSubmitting(false); } };
+                    fetchRaport(); 
+
+                } catch(e) { 
+                    alert("Gagal kirim. Cek internet atau link guru."); 
+                } finally { 
+                    setIsSubmitting(false); 
+                } 
+            };
+            // ==========================================
             
             const fetchRaport = async () => { 
                 if (!studentProfile.scriptUrl) return; 
@@ -820,24 +937,28 @@
             useEffect(() => { fetchRaport(); }, [studentProfile.scriptUrl]);
             useEffect(() => { if (view === 'raport') fetchRaport(); }, [view]);
 
-// --- FITUR LOMPAT KE HARI BERIKUTNYA ---
-useEffect(() => {
-    if (view === 'journal') {
-        let targetDay = 1;
-        for (let i = 1; i <= 30; i++) {
-            // Jika hari ke-i sudah diisi data oleh murid
-            if (userData[i] && Object.keys(userData[i]).length > 0) {
-                targetDay = i < 30 ? i + 1 : 30; // Maju ke hari berikutnya, maksimal hari 30
-            } else {
-                break; // Berhenti mencari jika menemukan hari kosong
-            }
-        }
-        setActiveDay(targetDay);
-    }
-}, [view]);
-// --------------------------------------
+            // --- PERBAIKAN FITUR LOMPAT KE HARI BERIKUTNYA ---
+            useEffect(() => {
+                if (view === 'journal') {
+                    let targetDay = 1;
+                    for (let i = 1; i <= 30; i++) {
+                        // Cek apakah hari ini sudah disubmit secara lokal
+                        const isSubmittedLocally = userData[i] && userData[i].submitted_journal;
+                        // Cek apakah hari ini sudah ada di server (yang bertipe jurnal)
+                        const isSubmittedServer = raportData && raportData.some(d => parseInt(d.hari) === i && (!d.audio || d.audio.length < 50) && (!d.foto || d.foto.length < 50));
+                        
+                        if (isSubmittedLocally || isSubmittedServer) {
+                            targetDay = i < 30 ? i + 1 : 30; // Lanjut cek hari berikutnya
+                        } else {
+                            break; // Berhenti di hari pertama yang masih kosong / belum disubmit
+                        }
+                    }
+                    setActiveDay(targetDay);
+                }
+            }, [view, raportData]);
+            // --------------------------------------
 
-// --- KAMUS TEMA WARNA ---
+            // --- KAMUS TEMA WARNA ---
             const colorThemes = {
                 hijau: { bgLight: 'bg-emerald-50', bgMain: 'bg-emerald-600', textMain: 'text-emerald-800', btn: 'bg-emerald-600 hover:bg-emerald-700', activeTab: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
                 biru: { bgLight: 'bg-blue-50', bgMain: 'bg-blue-600', textMain: 'text-blue-800', btn: 'bg-blue-600 hover:bg-blue-700', activeTab: 'bg-blue-100 text-blue-700 border-blue-200' },
@@ -847,6 +968,13 @@ useEffect(() => {
             const activeThemeKey = studentProfile.theme || 'hijau'; // Default hijau
             const theme = colorThemes[activeThemeKey] || colorThemes['hijau'];
             // ------------------------
+            
+            // FUNGSI KELUAR DENGAN KONFIRMASI
+            const handleLogout = () => {
+                if(window.confirm("Yakin ingin keluar ke Menu Utama?")) {
+                    setRole('home');
+                }
+            };
 
             if (view === 'cover') return (
                 <div className={`h-full ${theme.bgLight} p-6 flex flex-col items-center justify-center text-center font-sans overflow-hidden transition-colors duration-300`}>
@@ -898,9 +1026,21 @@ useEffect(() => {
             
             return (
                 <div className={`h-full ${theme.bgLight} font-sans flex flex-col overflow-hidden transition-colors duration-300`}>
-                    <div className={`${theme.bgMain} text-white p-5 rounded-b-3xl shadow-lg sticky top-0 z-10 shrink-0 transition-colors duration-300`}><div className="flex justify-between items-center mb-2"><div><h1 className="font-bold">{studentProfile.name || 'Murid'}</h1><p className="text-xs opacity-80">{studentProfile.class || 'Kelas -'}</p></div><button onClick={() => setView('cover')} className="bg-white/20 p-2 rounded-full hover:bg-white/30"><Icons.Settings size={18}/></button></div><div className="bg-black/20 p-2 rounded-xl flex items-center justify-between"><span className="text-xs font-bold flex items-center gap-1"><Icons.Trophy size={14} className="text-yellow-300"/> Total Poin:</span><span className="text-xl font-black text-yellow-300">{getDisplayScore()}</span></div></div>
+                    <div className={`${theme.bgMain} text-white p-5 rounded-b-3xl shadow-lg sticky top-0 z-10 shrink-0 transition-colors duration-300`}>
+                        <div className="flex justify-between items-center mb-2">
+                            <div>
+                                <h1 className="font-bold">{studentProfile.name || 'Murid'}</h1>
+                                <p className="text-xs opacity-80">{studentProfile.class || 'Kelas -'}</p>
+                            </div>
+                            <div className="flex gap-2">
+                                <button onClick={() => setView('cover')} className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition"><Icons.Settings size={18}/></button>
+                                <button onClick={handleLogout} className="bg-red-500/80 p-2 rounded-full border border-red-400 hover:bg-red-500 transition"><Icons.LogOut size={18}/></button>
+                            </div>
+                        </div>
+                        <div className="bg-black/20 p-2 rounded-xl flex items-center justify-between"><span className="text-xs font-bold flex items-center gap-1"><Icons.Trophy size={14} className="text-yellow-300"/> Total Poin:</span><span className="text-xl font-black text-yellow-300">{getDisplayScore()}</span></div>
+                    </div>
                     
-                    <div className="px-4 -mt-4 relative z-10 flex-1 overflow-y-auto pb-24">
+                    <div className="px-4 -mt-4 relative z-10 flex-1 overflow-y-auto pb-6">
                         <div className="bg-white p-1 rounded-xl shadow-md flex mb-4 text-[10px] font-bold text-center border border-slate-100 overflow-x-auto sticky top-0 z-20">
                             {['journal', 'doa', 'hafalan', 'achievements', 'raport'].map(m => (
                                 <button key={m} onClick={() => setView(m)} className={`flex-1 py-2 px-1 capitalize rounded-lg transition-colors border ${view===m ? theme.activeTab : 'text-slate-400 border-transparent hover:bg-slate-50'}`}>
@@ -1029,7 +1169,6 @@ useEffect(() => {
                     )}
 
                     {showConfetti && <div className="fixed inset-0 flex items-center justify-center z-50 text-6xl animate-bounce">🎉</div>}
-                    <button onClick={() => setRole('home')} className="fixed bottom-4 right-4 bg-red-500 text-white p-3 rounded-full shadow-lg border border-red-600 z-50"><Icons.LogOut size={20}/></button>
                 </div>
             );
         }
