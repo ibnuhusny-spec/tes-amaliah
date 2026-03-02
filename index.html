@@ -64,6 +64,20 @@
             return Math.abs(hash).toString(36);
         };
 
+        // --- HELPER UNTUK MENGUBAH LINK DRIVE MENJADI DIRECT LINK ---
+        const getDirectUrl = (url) => {
+            if (!url || typeof url !== 'string') return url;
+            // Jika itu adalah link Google Drive standar (bukan file base64)
+            if (url.includes('drive.google.com') && !url.includes('uc?')) {
+                // Ambil ID dari link Drive
+                const match = url.match(/[-\w]{25,}/);
+                if (match) {
+                    return `https://drive.google.com/uc?export=view&id=${match[0]}`;
+                }
+            }
+            return url;
+        };
+
         // --- SISTEM IKON ---
         const LucideIcons = window.lucide ? window.lucide.icons : {};
         const Icon = ({ name, size = 20, className = "", ...props }) => {
@@ -182,13 +196,15 @@
                     img.src = e.target.result;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 600; 
+                        // Resolusi dioptimalkan untuk Drive, tidak terlalu kecil namun file size tetap terjaga
+                        const MAX_WIDTH = 800; 
                         const scaleSize = MAX_WIDTH / img.width;
                         canvas.width = (scaleSize < 1) ? MAX_WIDTH : img.width;
                         canvas.height = (scaleSize < 1) ? (img.height * scaleSize) : img.height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.6)); 
+                        // Kualitas kompresi disesuaikan (0.5 cukup bagus & ringan)
+                        resolve(canvas.toDataURL('image/jpeg', 0.5)); 
                     }
                 }
             });
@@ -420,7 +436,7 @@
                         <div className="space-y-3">
                             <button onClick={handleStudentEnter} className="w-full bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-bold py-4 rounded-xl flex items-center justify-center gap-3 transition-transform active:scale-95 shadow-lg border-b-4 border-yellow-600"><Icons.User size={24} /> Masuk sebagai Murid</button>
                         </div>
-                        <div className="mt-8 pt-4 border-t border-white/10"><p className="text-[10px] text-emerald-200/60">Versi Final 9.5 (Akurat Filter, Navigasi Aktif)</p></div>
+                        <div className="mt-8 pt-4 border-t border-white/10"><p className="text-[10px] text-emerald-200/60">Versi Final 9.6 (Optimasi Drive & Perhitungan Poin Dinamis)</p></div>
                     </div>
 
                     {/* PIN PROMPT */}
@@ -527,12 +543,13 @@
                 if (navigator.clipboard) { navigator.clipboard.writeText(magicLink).then(() => alert("✨ Link Ajaib Tersalin!\n\nLink ini sudah berisi: \n1. Koneksi Database\n2. Nama Sekolah ("+schoolName+")\n\nMurid tinggal klik dan pakai!")).catch(() => prompt("Salin manual:", magicLink)); } else { prompt("Salin link:", magicLink); }
             };
 
-            // PERBAIKAN FILTER: Menggunakan teks Rincian yang akurat untuk mencegah salah tab
+            // PERBAIKAN FILTER: Deteksi lebih akurat berdasarkan isi teks dan link (bukan cuma panjang karakter)
             const getFilteredData = () => {
                 return data.filter(item => {
                     const text = item.rincian || item.kebaikan || "";
-                    const isHafalan = text.includes('🎤') || (item.audio && item.audio.length > 50);
-                    const isGaleri = text.includes('📸') || (item.foto && item.foto.length > 50);
+                    // Memastikan file yang mengandung link drive masuk ke tab yang tepat
+                    const isHafalan = text.includes('🎤') || (item.audio && item.audio !== "-" && item.audio.length > 10);
+                    const isGaleri = text.includes('📸') || (item.foto && item.foto !== "-" && item.foto.length > 10);
 
                     if (activeTab === 'hafalan') return isHafalan;
                     if (activeTab === 'galeri') return isGaleri;
@@ -579,16 +596,18 @@
                             getFilteredData().map((item, idx) => (
                             <div key={idx} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
                                 <div className="flex justify-between items-start mb-2"><div><h3 className="font-bold text-slate-800 flex items-center gap-2">{item.nama} <span className="text-[10px] bg-slate-100 px-1 rounded text-slate-500">#{item.rowIndex}</span></h3><p className="text-xs text-slate-500">Hari ke-{item.hari} • {item.kelas}</p></div>{activeTab === 'jurnal' && <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-1 rounded-full border border-yellow-200">{item.poin} Poin (Auto)</span>}</div>
-                                {activeTab === 'jurnal' && <div className="bg-slate-50 p-2 rounded-lg text-xs text-slate-600 mb-3 font-mono border border-slate-100">{item.rincian}</div>}
-                                {activeTab === 'hafalan' && <div className="mb-3"><div className="bg-blue-50 p-3 rounded-lg border border-blue-100 flex items-center justify-between mb-2"><div className="flex items-center gap-2"><Icons.Play size={14} className="text-blue-600"/><span className="text-xs font-bold text-blue-700">Putar Audio</span></div><audio controls src={item.audio} className="h-8 w-32" /></div><div className="text-[10px] text-slate-500 italic truncate">{item.rincian}</div></div>}
+                                {activeTab === 'jurnal' && <div className="bg-slate-50 p-2 rounded-lg text-xs text-slate-600 mb-3 font-mono border border-slate-100">{item.rincian || item.kebaikan}</div>}
                                 
-                                {/* LIGHTBOX IMAGE TRIGGER */}
+                                {/* TAMPILAN AUDIO DI PERLEBAR DAN LINK DIKONVERSI (getDirectUrl) */}
+                                {activeTab === 'hafalan' && <div className="mb-3"><div className="bg-blue-50 p-3 rounded-lg border border-blue-100 flex flex-col gap-2 mb-2"><div className="flex items-center gap-2"><Icons.Play size={14} className="text-blue-600"/><span className="text-xs font-bold text-blue-700">Putar Audio</span></div><audio controls src={getDirectUrl(item.audio)} className="h-10 w-full rounded" /></div><div className="text-[10px] text-slate-500 italic truncate">{item.rincian || item.kebaikan}</div></div>}
+                                
+                                {/* LIGHTBOX IMAGE TRIGGER DAN LINK DIKONVERSI (getDirectUrl) */}
                                 {activeTab === 'galeri' && <div className="mb-3">
-                                    <div className="relative group cursor-pointer" onClick={() => setPreviewImage(item.foto)}>
-                                        <img src={item.foto} alt="Bukti" className="w-full h-48 rounded-lg border border-slate-200 object-cover mb-2 transition hover:opacity-90" />
+                                    <div className="relative group cursor-pointer" onClick={() => setPreviewImage(getDirectUrl(item.foto))}>
+                                        <img src={getDirectUrl(item.foto)} alt="Bukti" className="w-full h-48 rounded-lg border border-slate-200 object-cover mb-2 transition hover:opacity-90" />
                                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/20 rounded-lg transition"><Icons.ZoomIn className="text-white drop-shadow-md" size={32}/></div>
                                     </div>
-                                    <div className="text-[10px] text-slate-500 italic">{item.rincian}</div>
+                                    <div className="text-[10px] text-slate-500 italic">{item.rincian || item.kebaikan}</div>
                                 </div>}
                                 
                                 <div className="border-t pt-2 mt-2 flex justify-between items-center">
@@ -657,9 +676,8 @@
             const mediaRecorderRef = useRef(null);
             const [raportData, setRaportData] = useState([]);
             const [loadingRaport, setLoadingRaport] = useState(false);
-            const [totalGuruScore, setTotalGuruScore] = useState(0); 
             
-            // LOCAL STATE UTK KUNCI 1x KIRIM (Immediate Lock)
+            // LOCAL STATE UTK KUNCI 1x KIRIM
             const [localSubmissions, setLocalSubmissions] = useState({ journal: false, audio: false, photo: false });
             const [previewImage, setPreviewImage] = useState(null); // LIGHTBOX
 
@@ -698,7 +716,6 @@
             }, [userData, studentProfile.scriptUrl, studentProfile.name]);
             // ---------------------------------------------------------
 
-            // PERBAIKAN: CEK STATUS SUBMIT INDEPENDEN (Hanya mengecek teks rincian yang relevan)
             const isJournalSubmitted = useMemo(() => {
                 if (userData[activeDay]?.submitted_journal) return true;
                 if (!raportData) return false;
@@ -717,7 +734,6 @@
                 return raportData.some(d => parseInt(d.hari) === activeDay && (d.rincian || d.kebaikan || "").includes('📸'));
             }, [raportData, activeDay, userData]);
 
-            // OTOMATIS CENTANG KETIKA MURID MENGETIK AMALAN LAIN
             const updateField = (day, field, value) => { 
                 if (userData[day]?.submitted_journal) return; 
                 setUserData(prev => {
@@ -754,7 +770,6 @@
 
             const toggleValidation = (day) => { setUserData(prev => ({ ...prev, [day]: { ...prev[day], validated: !prev[day].validated } })); if (!userData[day].validated) triggerConfetti(); };
             
-            // NO LIMIT on Image Size, just Compress
             const handleImageUpload = async (e) => { 
                 const file = e.target.files[0]; 
                 if(file) { 
@@ -768,7 +783,39 @@
                 } 
             };
             const removeImage = () => { setSelectedImage(null); setBase64Image(""); };
-            const startRecording = async () => { try { const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); const options = { mimeType: 'audio/webm;codecs=opus' }; const mediaRecorder = new MediaRecorder(stream, MediaRecorder.isTypeSupported(options.mimeType) ? options : {}); mediaRecorderRef.current = mediaRecorder; const chunks = []; mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); }; mediaRecorder.onstop = () => { const blob = new Blob(chunks, { type: 'audio/webm' }); setAudioBlob(blob); setAudioUrl(URL.createObjectURL(blob)); stream.getTracks().forEach(track => track.stop()); }; mediaRecorder.start(); setIsRecording(true); } catch (e) { alert("Gagal mengakses Mic."); } };
+            
+            // --- DURASI AUDIO DITINGKATKAN MENJADI 60 DETIK ---
+            const startRecording = async () => { 
+                try { 
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); 
+                    const options = { audioBitsPerSecond: 16000 }; 
+                    const mediaRecorder = new MediaRecorder(stream, options); 
+                    mediaRecorderRef.current = mediaRecorder; 
+                    const chunks = []; 
+                    mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); }; 
+                    mediaRecorder.onstop = () => { 
+                        const mimeType = mediaRecorder.mimeType || 'audio/mp4';
+                        const blob = new Blob(chunks, { type: mimeType }); 
+                        setAudioBlob(blob); 
+                        setAudioUrl(URL.createObjectURL(blob)); 
+                        stream.getTracks().forEach(track => track.stop()); 
+                    }; 
+                    mediaRecorder.start(); 
+                    setIsRecording(true); 
+
+                    // Batasi durasi rekaman maksimal 60 detik
+                    setTimeout(() => {
+                        if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+                            mediaRecorderRef.current.stop();
+                            setIsRecording(false);
+                            alert("Batas waktu rekaman (60 detik) otomatis berhenti.");
+                        }
+                    }, 60000);
+                    
+                } catch (e) { 
+                    alert("Gagal mengakses Mic."); 
+                } 
+            };
             const stopRecording = () => { if(mediaRecorderRef.current) { mediaRecorderRef.current.stop(); setIsRecording(false); } };
             const deleteRecording = () => { setAudioBlob(null); setAudioUrl(null); };
             
@@ -777,8 +824,8 @@
                 if (dayData.puasaPenuh) score += 20; else if (dayData.puasaSetengah) score += 10;
                 if (dayData.subuh) score += 10; if (dayData.zuhur) score += 10; if (dayData.ashar) score += 10; if (dayData.maghrib) score += 10; if (dayData.isya) score += 10; 
                 if (dayData.tarawih) score += 10; if (dayData.witir) score += 10; if (dayData.tadarus) score += 10; if (dayData.salatMalam) { score += (dayIndex >= 21) ? 20 : 10; } if (dayData.bantuIbu) score += 5; if (dayData.kosakata) score += 5; if (dayData.amalanLainCheck1) score += 5; 
-if (dayData.amalanLainCheck2) score += 5; 
-if (dayData.amalanLainCheck3) score += 5; if (dayData.hafalDoa) score += 10; if (dayData.namaPenceramah) score += 5; if (dayData.temaCeramah) score += 10; 
+                if (dayData.amalanLainCheck2) score += 5; 
+                if (dayData.amalanLainCheck3) score += 5; if (dayData.hafalDoa) score += 10; if (dayData.namaPenceramah) score += 5; if (dayData.temaCeramah) score += 10; 
                 
                 // EVALUASI DIRI (MINUS POINTS)
                 if (dayData.eval_game) score -= 20;
@@ -790,17 +837,33 @@ if (dayData.amalanLainCheck3) score += 5; if (dayData.hafalDoa) score += 10; if 
                 return Math.max(0, score); 
             };
             
-            const calculateTotalLocalScore = () => { let score = 0; Object.entries(userData).forEach(([d, data]) => score += calculateDailyScore(data, parseInt(d))); return score; };
-            
-           const getDisplayScore = () => {
-                let serverScore = 0;
+            // --- PERBAIKAN: HITUNG TOTAL POIN REALTIME ---
+            const getDisplayScore = () => {
+                let total = 0;
+                let submittedDays = new Set();
+
+                // 1. Tambahkan poin dari server (yang sudah disubmit dan dinilai guru)
                 if (raportData && raportData.length > 0) {
                     raportData.forEach(row => {
-                        serverScore += (parseInt(row.poin) || 0); 
-                        serverScore += (parseInt(row.nilaiGuru) || 0); 
+                        total += (parseInt(row.poin) || 0); 
+                        total += (parseInt(row.nilaiGuru) || 0); 
+                        
+                        // Tandai hari yang sudah terkirim jurnalnya
+                        const text = row.rincian || row.kebaikan || "";
+                        if (!text.includes('🎤') && !text.includes('📸')) {
+                            submittedDays.add(parseInt(row.hari));
+                        }
                     });
                 }
-                return serverScore; 
+
+                // 2. Tambahkan poin lokal yang SEDANG DIKERJAKAN tapi BELUM DISUBMIT
+                for (let i = 1; i <= 30; i++) {
+                    if (!submittedDays.has(i) && userData[i] && !userData[i].submitted_journal) {
+                        total += calculateDailyScore(userData[i], i);
+                    }
+                }
+                
+                return total; 
             };
 
             // ==========================================
@@ -937,7 +1000,6 @@ if (dayData.amalanLainCheck3) score += 5; if (dayData.hafalDoa) score += 10; if 
             useEffect(() => { fetchRaport(); }, [studentProfile.scriptUrl]);
             useEffect(() => { if (view === 'raport') fetchRaport(); }, [view]);
 
-            // --- PERBAIKAN FITUR LOMPAT KE HARI BERIKUTNYA ---
             useEffect(() => {
                 if (raportData) {
                     let targetDay = 1;
@@ -953,10 +1015,8 @@ if (dayData.amalanLainCheck3) score += 5; if (dayData.hafalDoa) score += 10; if 
                     }
                     setActiveDay(targetDay);
                 }
-                // Hanya jalankan ketika data rapot baru diambil/diupdate (bukan setiap kali klik tab)
             // eslint-disable-next-line react-hooks/exhaustive-deps
             }, [raportData.length]); 
-            // --------------------------------------
 
             // --- KAMUS TEMA WARNA ---
             const colorThemes = {
@@ -1133,21 +1193,22 @@ if (dayData.amalanLainCheck3) score += 5; if (dayData.hafalDoa) score += 10; if 
                             ))}
                         </div>)}
                         
+                        {/* TAMPILAN DI RAPORT JUGA MENGGUNAKAN GETDIRECTURL AGAR BISA DIMAINKAN */}
                         {view === 'raport' && (<div className="space-y-3 pb-10"><h2 className={`font-bold ${theme.textMain} flex items-center gap-2 mb-2`}><Icons.FileText size={18}/> Riwayat & Nilai</h2>{loadingRaport ? <div className="text-center text-slate-400 py-4">Mengambil data...</div> : raportData.length === 0 ? <div className="text-center text-slate-400 py-4 bg-white rounded-xl border border-slate-200">Belum ada data nilai.</div> : raportData.map((item, idx) => {
                                 const isMedia = (item.audio && item.audio.length > 50) || (item.foto && item.foto.length > 50);
                                 return (
                                 <div key={idx} className={`bg-white p-4 rounded-xl shadow-sm border-l-4 ${theme.activeTab.split(' ')[2]} border border-slate-100`}>
                                     <div className="flex justify-between text-xs text-slate-500 mb-2"><span>Hari ke-{item.hari}</span><span>{new Date(item.waktu).toLocaleDateString()}</span></div>
                                     
-                                    {item.audio && item.audio.length > 50 && <div className="mb-2 bg-blue-50 p-2 rounded border border-blue-100 flex items-center gap-2"><Icons.Play size={12} className="text-blue-600"/><span className="text-xs font-bold text-blue-700">Setoran Audio</span></div>}
+                                    {item.audio && item.audio.length > 50 && <div className="mb-2 bg-blue-50 p-2 rounded border border-blue-100 flex flex-col gap-2"><div className="flex items-center gap-2"><Icons.Play size={12} className="text-blue-600"/><span className="text-xs font-bold text-blue-700">Setoran Audio</span></div><audio controls src={getDirectUrl(item.audio)} className="h-8 w-full rounded" /></div>}
                                     {item.foto && item.foto.length > 50 && (
-                                        <div className="mb-2 relative group cursor-pointer" onClick={() => setPreviewImage(item.foto)}>
-                                            <img src={item.foto} className="h-20 w-full object-cover rounded border border-slate-200" alt="Bukti"/>
+                                        <div className="mb-2 relative group cursor-pointer" onClick={() => setPreviewImage(getDirectUrl(item.foto))}>
+                                            <img src={getDirectUrl(item.foto)} className="h-20 w-full object-cover rounded border border-slate-200" alt="Bukti"/>
                                             <div className="absolute inset-0 bg-black/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition"><Icons.ZoomIn className="text-white drop-shadow-md"/></div>
                                         </div>
                                     )}
                                     
-                                    <div className="font-bold text-slate-800 text-sm mb-1">{item.rincian || 'Laporan Harian'}</div>
+                                    <div className="font-bold text-slate-800 text-sm mb-1">{item.rincian || item.kebaikan || 'Laporan Harian'}</div>
                                     
                                     {(item.nilaiGuru || item.koreksiGuru) ? (
                                         <div className="mt-2 bg-yellow-50 p-2 rounded-lg border border-yellow-100">
