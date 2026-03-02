@@ -188,15 +188,16 @@
                     img.src = e.target.result;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        // Resolusi dikurangi sedikit untuk memastikan tidak melewati batas Sheet
-                        const MAX_WIDTH = 400; 
+                        // RESOLUSI DITINGKATKAN AGAR GAMBAR TIDAK JELEK/PECAH
+                        // Lebar maksimal diubah menjadi 1200px (HD)
+                        const MAX_WIDTH = 1200; 
                         const scaleSize = MAX_WIDTH / img.width;
                         canvas.width = (scaleSize < 1) ? MAX_WIDTH : img.width;
                         canvas.height = (scaleSize < 1) ? (img.height * scaleSize) : img.height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        // Kualitas kompresi di set ke 0.5
-                        resolve(canvas.toDataURL('image/jpeg', 0.5)); 
+                        // Kualitas dinaikkan ke 0.85
+                        resolve(canvas.toDataURL('image/jpeg', 0.85)); 
                     }
                 }
             });
@@ -428,7 +429,7 @@
                         <div className="space-y-3">
                             <button onClick={handleStudentEnter} className="w-full bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-bold py-4 rounded-xl flex items-center justify-center gap-3 transition-transform active:scale-95 shadow-lg border-b-4 border-yellow-600"><Icons.User size={24} /> Masuk sebagai Murid</button>
                         </div>
-                        <div className="mt-8 pt-4 border-t border-white/10"><p className="text-[10px] text-emerald-200/60">Versi Final 10.3 (Direct Base64 Terpecah & Sinkronisasi Kuat)</p></div>
+                        <div className="mt-8 pt-4 border-t border-white/10"><p className="text-[10px] text-emerald-200/60">Versi Final 10.4 (Resolusi Gambar Maksimal)</p></div>
                     </div>
 
                     {/* PIN PROMPT */}
@@ -488,7 +489,6 @@
             const [saving, setSaving] = useState(false);
             const [errorMsg, setErrorMsg] = useState('');
             const [activeTab, setActiveTab] = useState('jurnal');
-            const [previewImage, setPreviewImage] = useState(null);
 
             useEffect(() => { fetchData(); }, []);
 
@@ -642,19 +642,6 @@
                         </div>
                     </div>
 
-                    {/* LIGHTBOX MODAL UNTUK GAMBAR */}
-                    {previewImage && (
-                        <div className="fixed inset-0 bg-black/95 z-[100] flex flex-col items-center justify-center p-4 animate-in fade-in" onClick={() => setPreviewImage(null)}>
-                            <button onClick={() => setPreviewImage(null)} className="absolute top-8 right-6 text-white bg-red-600/80 p-3 rounded-full hover:bg-red-600 shadow-lg z-[101]">
-                                <Icons.XIcon size={28}/>
-                            </button>
-                            <img src={previewImage} className="max-w-full max-h-[80vh] rounded-lg shadow-2xl object-contain mb-4" onClick={(e) => e.stopPropagation()}/>
-                            <button onClick={() => setPreviewImage(null)} className="bg-white text-slate-900 px-6 py-3 rounded-full font-bold shadow-lg z-[101]">
-                                Tutup Gambar
-                            </button>
-                        </div>
-                    )}
-
                     {selectedStudent && (<div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"><div className="bg-white w-[90%] max-w-sm rounded-2xl p-6 shadow-2xl relative"><button onClick={() => setSelectedStudent(null)} className="absolute top-4 right-4 bg-slate-100 p-1 rounded-full"><Icons.XIcon size={20} className="text-slate-500"/></button><h3 className="font-bold text-lg mb-1 text-slate-800">Beri Nilai</h3><p className="text-xs text-slate-500 mb-4">{selectedStudent.nama} • {selectedStudent.rowIndex}</p><div className="space-y-4 mb-6"><div><label className="text-xs font-bold text-slate-500 block mb-1">Nilai Guru</label><input type="text" value={nilaiInput} onChange={(e) => setNilaiInput(e.target.value)} className="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Contoh: 100" /></div><div><label className="text-xs font-bold text-slate-500 block mb-1">Koreksi</label><textarea rows="3" value={koreksiInput} onChange={(e) => setKoreksiInput(e.target.value)} className="w-full p-3 bg-slate-50 border rounded-xl text-sm" /></div></div><button onClick={handleSimpanNilai} disabled={saving} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold flex justify-center items-center gap-2">{saving ? <Icons.Loader2 className="animate-spin"/> : <Icons.CheckSquare size={18}/>} Simpan</button></div></div>)}
                 </div>
             );
@@ -693,7 +680,6 @@
             
             // KUNCI SEMENTARA UNTUK MENCEGAH DOUBLE SUBMIT
             const [localLocks, setLocalLocks] = useState({});
-            const [previewImage, setPreviewImage] = useState(null);
 
             const currentDateGregorian = getGregorianDate(studentProfile.startDateRamadan || '2026-02-18', activeDay);
             const triggerConfetti = () => { setShowConfetti(true); setTimeout(() => setShowConfetti(false), 3000); };
@@ -1151,7 +1137,7 @@
                                 ].map(item => (
                                      <div key={item.key} onClick={() => toggleCheck(activeDay, item.key)} className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition ${userData[activeDay]?.[item.key] ? 'bg-red-100 border-red-400' : 'bg-white border-red-100'}`}>
                                          <span className="text-sm font-bold text-slate-700">{item.label}</span>
-                                         {userData[activeDay]?.[item.key] && <div className="bg-red-500 text-white rounded-full p-1"><Icons.XIcon size={12}/></div>}
+                                         {userData[activeDay]?.[item.key] && <div className="bg-red-50 text-red-600 rounded-full p-1"><Icons.XIcon size={12}/></div>}
                                      </div>
                                 ))}
 
@@ -1236,19 +1222,6 @@
                             {isPhotoSubmitted ? 'Sudah Dikirim Hari Ini' : 'Kirim Foto'}
                         </button></div>)}
                     </div>
-                    
-                    {/* LIGHTBOX DIKEMBALIKAN */}
-                    {previewImage && (
-                        <div className="fixed inset-0 bg-black/95 z-[70] flex flex-col items-center justify-center p-4 animate-in fade-in" onClick={() => setPreviewImage(null)}>
-                            <button onClick={() => setPreviewImage(null)} className="absolute top-8 right-6 text-white bg-red-600/80 p-3 rounded-full hover:bg-red-600 shadow-lg z-[101]">
-                                <Icons.XIcon size={28}/>
-                            </button>
-                            <img src={previewImage} className="max-w-full max-h-[80vh] rounded-lg shadow-2xl object-contain mb-4" onClick={(e) => e.stopPropagation()}/>
-                            <button onClick={() => setPreviewImage(null)} className="bg-white text-slate-900 px-6 py-3 rounded-full font-bold shadow-lg z-[101]">
-                                Tutup Gambar
-                            </button>
-                        </div>
-                    )}
 
                     {showConfetti && <div className="fixed inset-0 flex items-center justify-center z-50 text-6xl animate-bounce">🎉</div>}
                 </div>
