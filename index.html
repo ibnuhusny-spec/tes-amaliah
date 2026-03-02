@@ -65,8 +65,21 @@
         };
 
         // KARENA GOOGLE APPS SCRIPT SUDAH MEMBERIKAN DIRECT LINK, KITA TIDAK PERLU MERUBAHNYA LAGI DI SINI
+        // TAPI KITA PASTIKAN LINKNYA BISA DI KLIK
         const getValidMediaUrl = (url) => {
-            if (!url || url === "-" || typeof url !== 'string') return null;
+            if (!url || url === "-" || url === "Error save file" || typeof url !== 'string') return null;
+            // Jika script code.gs Anda masih menghasilkan URL Google Drive asli, ubah ke versi view agar bisa dibuka
+            if (url.includes('drive.google.com/file/d/')) {
+                return url; // Biarkan seperti ini agar browser membuka halaman Drive biasa yang pasti aman
+            }
+            if (url.includes('drive.google.com/open?id=')) {
+                return url;
+            }
+            if (url.includes('drive.google.com/uc?')) {
+                // Konversi URL uc? ke halaman view biasa karena terkadang mode download diblokir browser
+                 const match = url.match(/id=([^&]+)/);
+                 if(match) return `https://drive.google.com/file/d/${match[1]}/view`;
+            }
             return url;
         };
 
@@ -428,7 +441,7 @@
                         <div className="space-y-3">
                             <button onClick={handleStudentEnter} className="w-full bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-bold py-4 rounded-xl flex items-center justify-center gap-3 transition-transform active:scale-95 shadow-lg border-b-4 border-yellow-600"><Icons.User size={24} /> Masuk sebagai Murid</button>
                         </div>
-                        <div className="mt-8 pt-4 border-t border-white/10"><p className="text-[10px] text-emerald-200/60">Versi Final 10.0 (Clear Media Locks & Buttons)</p></div>
+                        <div className="mt-8 pt-4 border-t border-white/10"><p className="text-[10px] text-emerald-200/60">Versi Final 10.1 (Sync Pintar & Buka Drive)</p></div>
                     </div>
 
                     {/* PIN PROMPT */}
@@ -498,7 +511,14 @@
                     const response = await fetch(scriptUrl);
                     if (!response.ok) throw new Error("Gagal mengambil data");
                     const json = await response.json();
-                    setData(json);
+                    
+                    // JIKA SPREADSHEET KOSONG, BERSIHKAN JUGA LOCALSTORAGE GURU AGAR SINKRON
+                    if (json.length === 0) {
+                         // Kita bisa hapus memori laporan, tp biarkan profil login dll.
+                         setData([]);
+                    } else {
+                         setData(json);
+                    }
                 } catch (e) {
                     setErrorMsg("Gagal koneksi. Pastikan Link Script benar.");
                 } finally {
@@ -522,7 +542,6 @@
 
             const openModal = (student) => { setSelectedStudent(student); setNilaiInput(student.nilaiGuru || ''); setKoreksiInput(student.koreksiGuru || ''); };
 
-            // MAGIC LINK V3
             const copyStudentLink = () => {
                 if (!scriptUrl) { alert("Link Script kosong!"); return; }
                 const isLocal = window.location.protocol === 'file:';
@@ -534,21 +553,19 @@
                 if (navigator.clipboard) { navigator.clipboard.writeText(magicLink).then(() => alert("✨ Link Ajaib Tersalin!\n\nLink ini sudah berisi: \n1. Koneksi Database\n2. Nama Sekolah ("+schoolName+")\n\nMurid tinggal klik dan pakai!")).catch(() => prompt("Salin manual:", magicLink)); } else { prompt("Salin link:", magicLink); }
             };
 
-            // PERBAIKAN FILTER
             const getFilteredData = () => {
                 return data.filter(item => {
                     const text = item.rincian || item.kebaikan || "";
+                    // Memastikan file yang mengandung link drive masuk ke tab yang tepat
                     const isHafalan = text.includes('🎤') || (item.audio && item.audio !== "-" && item.audio.length > 10);
                     const isGaleri = text.includes('📸') || (item.foto && item.foto !== "-" && item.foto.length > 10);
 
                     if (activeTab === 'hafalan') return isHafalan;
                     if (activeTab === 'galeri') return isGaleri;
-                    // Jurnal = yang bukan hafalan dan bukan galeri
                     return !isHafalan && !isGaleri;
                 });
             };
             
-            // FUNGSI KELUAR DENGAN KONFIRMASI
             const handleLogout = () => {
                 if(window.confirm("Yakin ingin keluar dari Dashboard Guru?")) {
                     setRole('home');
@@ -588,7 +605,7 @@
                                 <div className="flex justify-between items-start mb-2"><div><h3 className="font-bold text-slate-800 flex items-center gap-2">{item.nama} <span className="text-[10px] bg-slate-100 px-1 rounded text-slate-500">#{item.rowIndex}</span></h3><p className="text-xs text-slate-500">Hari ke-{item.hari} • {item.kelas}</p></div>{activeTab === 'jurnal' && <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-1 rounded-full border border-yellow-200">{item.poin} Poin (Auto)</span>}</div>
                                 {activeTab === 'jurnal' && <div className="bg-slate-50 p-2 rounded-lg text-xs text-slate-600 mb-3 font-mono border border-slate-100">{item.rincian || item.kebaikan}</div>}
                                 
-                                {/* TAMPILAN AUDIO DIUBAH JADI TOMBOL DIRECT LINK */}
+                                {/* TAMPILAN AUDIO HANYA TOMBOL DIRECT LINK */}
                                 {activeTab === 'hafalan' && (
                                     <div className="mb-3 bg-blue-50 border border-blue-200 p-3 rounded-xl">
                                         <div className="flex items-center justify-between mb-2">
@@ -596,7 +613,7 @@
                                         </div>
                                         {item.audio && item.audio !== "-" ? (
                                             <a href={getValidMediaUrl(item.audio)} target="_blank" rel="noreferrer" className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center gap-2 text-sm font-bold shadow-sm transition">
-                                                <Icons.Play size={16}/> Buka Rekaman (Drive)
+                                                <Icons.Play size={16}/> Buka Audio di Drive
                                             </a>
                                         ) : (
                                             <span className="text-xs text-slate-400 italic">File rekaman tidak tersedia.</span>
@@ -605,7 +622,7 @@
                                     </div>
                                 )}
                                 
-                                {/* TAMPILAN FOTO DIUBAH JADI TOMBOL DIRECT LINK */}
+                                {/* TAMPILAN FOTO HANYA TOMBOL DIRECT LINK */}
                                 {activeTab === 'galeri' && (
                                     <div className="mb-3 bg-slate-50 border border-slate-200 p-3 rounded-xl">
                                         <div className="flex items-center justify-between mb-2">
@@ -613,7 +630,7 @@
                                         </div>
                                         {item.foto && item.foto !== "-" ? (
                                             <a href={getValidMediaUrl(item.foto)} target="_blank" rel="noreferrer" className="w-full py-3 bg-slate-700 hover:bg-slate-800 text-white rounded-lg flex items-center justify-center gap-2 text-sm font-bold shadow-sm transition">
-                                                <Icons.Image size={16}/> Lihat Gambar (Drive)
+                                                <Icons.Image size={16}/> Lihat Foto di Drive
                                             </a>
                                         ) : (
                                             <span className="text-xs text-slate-400 italic">File gambar tidak tersedia.</span>
@@ -712,23 +729,22 @@
             }, [userData, studentProfile.scriptUrl, studentProfile.name]);
             // ---------------------------------------------------------
 
-            // PERBAIKAN LOCK SYSTEM: Hanya mengandalkan Raport (Data Server) & LocalLock Sementara. 
-            // LocalStorage (userData.submitted) tidak dipakai mengunci lagi, sehingga kalau Sheet dikosongkan, App akan Terbuka
+            // PERBAIKAN LOCK SYSTEM: Cek langsung ke raportData (Server) DAN hilangkan paksaan LocalStorage
             const isDayJournalSubmitted = (day) => {
                 if (localLocks[`${day}_journal`]) return true;
-                if (!raportData) return false;
+                if (!raportData || raportData.length === 0) return false;
                 return raportData.some(d => parseInt(d.hari) === day && !(d.rincian || d.kebaikan || "").includes('🎤') && !(d.rincian || d.kebaikan || "").includes('📸'));
             };
 
             const isDayAudioSubmitted = (day) => {
                 if (localLocks[`${day}_audio`]) return true;
-                if (!raportData) return false;
+                if (!raportData || raportData.length === 0) return false;
                 return raportData.some(d => parseInt(d.hari) === day && (d.rincian || d.kebaikan || "").includes('🎤'));
             };
 
             const isDayPhotoSubmitted = (day) => {
                 if (localLocks[`${day}_photo`]) return true;
-                if (!raportData) return false;
+                if (!raportData || raportData.length === 0) return false;
                 return raportData.some(d => parseInt(d.hari) === day && (d.rincian || d.kebaikan || "").includes('📸'));
             };
 
@@ -991,6 +1007,20 @@
                 try { 
                     const res = await fetch(studentProfile.scriptUrl); 
                     const json = await res.json(); 
+                    
+                    // PERBAIKAN SINKRONISASI (CLEAN CACHE)
+                    // Jika Sheet Kosong, maka kita paksa hapus data lokal!
+                    if (json.length === 0 && raportData.length > 0) {
+                         const dataKey = getStorageKey('userData');
+                         localStorage.removeItem(dataKey);
+                         const init = {}; 
+                         for(let i=1; i<=30; i++) { init[i] = { puasa: false, tarawih: false, validated: false }; }
+                         setUserData(init);
+                         setLocalLocks({}); // Buka semua gembok
+                         setRaportData([]);
+                         return; // Keluar dari fungsi ini
+                    }
+                    
                     const myData = json.filter(row => row.nama.toLowerCase() === studentProfile.name.toLowerCase()); 
                     setRaportData(myData); 
                 } catch(e) {} finally { setLoadingRaport(false); } 
@@ -1001,7 +1031,7 @@
 
             // AUTO JUMP HARI: Hanya akan melompat jika data server untuk jurnal hari tersebut sudah terisi
             useEffect(() => {
-                if (raportData) {
+                if (raportData && raportData.length > 0) {
                     let targetDay = 1;
                     for (let i = 1; i <= 30; i++) {
                         if (isDayJournalSubmitted(i)) {
@@ -1011,6 +1041,9 @@
                         }
                     }
                     setActiveDay(targetDay);
+                } else if (raportData.length === 0) {
+                    // Jika sheet kosong, paksa kembali ke hari pertama
+                    setActiveDay(1);
                 }
             // eslint-disable-next-line react-hooks/exhaustive-deps
             }, [raportData.length]); 
