@@ -67,12 +67,11 @@
         // --- HELPER UNTUK MENGUBAH LINK DRIVE MENJADI DIRECT LINK ---
         const getDirectUrl = (url) => {
             if (!url || typeof url !== 'string') return url;
-            // Jika itu adalah link Google Drive standar (bukan file base64)
-            if (url.includes('drive.google.com') && !url.includes('uc?')) {
-                // Ambil ID dari link Drive
+            // Cegah modifikasi jika link sudah berupa direct thumbnail / download
+            if (url.includes('drive.google.com') && !url.includes('uc?') && !url.includes('thumbnail?')) {
                 const match = url.match(/[-\w]{25,}/);
                 if (match) {
-                    return `https://drive.google.com/uc?export=view&id=${match[0]}`;
+                    return `https://drive.google.com/uc?export=download&id=${match[0]}`;
                 }
             }
             return url;
@@ -196,14 +195,14 @@
                     img.src = e.target.result;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        // Resolusi dioptimalkan untuk Drive, tidak terlalu kecil namun file size tetap terjaga
-                        const MAX_WIDTH = 800; 
+                        // Resolusi dioptimalkan, kualitas tetap terjaga tapi file lebih kecil
+                        const MAX_WIDTH = 600; 
                         const scaleSize = MAX_WIDTH / img.width;
                         canvas.width = (scaleSize < 1) ? MAX_WIDTH : img.width;
                         canvas.height = (scaleSize < 1) ? (img.height * scaleSize) : img.height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        // Kualitas kompresi disesuaikan (0.5 cukup bagus & ringan)
+                        // Kualitas kompresi di set ke 0.5 (Sangat ringan)
                         resolve(canvas.toDataURL('image/jpeg', 0.5)); 
                     }
                 }
@@ -436,7 +435,7 @@
                         <div className="space-y-3">
                             <button onClick={handleStudentEnter} className="w-full bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-bold py-4 rounded-xl flex items-center justify-center gap-3 transition-transform active:scale-95 shadow-lg border-b-4 border-yellow-600"><Icons.User size={24} /> Masuk sebagai Murid</button>
                         </div>
-                        <div className="mt-8 pt-4 border-t border-white/10"><p className="text-[10px] text-emerald-200/60">Versi Final 9.6 (Optimasi Drive & Perhitungan Poin Dinamis)</p></div>
+                        <div className="mt-8 pt-4 border-t border-white/10"><p className="text-[10px] text-emerald-200/60">Versi Final 9.8 (Audio 120 Detik & Optimasi Drive)</p></div>
                     </div>
 
                     {/* PIN PROMPT */}
@@ -543,7 +542,7 @@
                 if (navigator.clipboard) { navigator.clipboard.writeText(magicLink).then(() => alert("✨ Link Ajaib Tersalin!\n\nLink ini sudah berisi: \n1. Koneksi Database\n2. Nama Sekolah ("+schoolName+")\n\nMurid tinggal klik dan pakai!")).catch(() => prompt("Salin manual:", magicLink)); } else { prompt("Salin link:", magicLink); }
             };
 
-            // PERBAIKAN FILTER: Deteksi lebih akurat berdasarkan isi teks dan link (bukan cuma panjang karakter)
+            // PERBAIKAN FILTER: Deteksi lebih akurat berdasarkan isi teks dan link 
             const getFilteredData = () => {
                 return data.filter(item => {
                     const text = item.rincian || item.kebaikan || "";
@@ -784,11 +783,17 @@
             };
             const removeImage = () => { setSelectedImage(null); setBase64Image(""); };
             
-            // --- DURASI AUDIO DITINGKATKAN MENJADI 60 DETIK ---
+            // --- DURASI AUDIO DITINGKATKAN MENJADI 120 DETIK ---
             const startRecording = async () => { 
                 try { 
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); 
-                    const options = { audioBitsPerSecond: 16000 }; 
+                    
+                    // Optimasi Bitrate rendah agar ukuran file ringan saat diupload
+                    let options = { audioBitsPerSecond: 16000 }; 
+                    if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                        options.mimeType = 'audio/webm;codecs=opus';
+                    }
+                    
                     const mediaRecorder = new MediaRecorder(stream, options); 
                     mediaRecorderRef.current = mediaRecorder; 
                     const chunks = []; 
@@ -803,17 +808,17 @@
                     mediaRecorder.start(); 
                     setIsRecording(true); 
 
-                    // Batasi durasi rekaman maksimal 60 detik
+                    // Batasi durasi rekaman maksimal 120 detik (2 Menit)
                     setTimeout(() => {
                         if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
                             mediaRecorderRef.current.stop();
                             setIsRecording(false);
-                            alert("Batas waktu rekaman (60 detik) otomatis berhenti.");
+                            alert("Batas waktu rekaman (120 detik) otomatis berhenti.");
                         }
-                    }, 60000);
+                    }, 120000);
                     
                 } catch (e) { 
-                    alert("Gagal mengakses Mic."); 
+                    alert("Gagal mengakses Mic. Pastikan browser diizinkan mengakses mikrofon."); 
                 } 
             };
             const stopRecording = () => { if(mediaRecorderRef.current) { mediaRecorderRef.current.stop(); setIsRecording(false); } };
@@ -1195,13 +1200,13 @@
                         
                         {/* TAMPILAN DI RAPORT JUGA MENGGUNAKAN GETDIRECTURL AGAR BISA DIMAINKAN */}
                         {view === 'raport' && (<div className="space-y-3 pb-10"><h2 className={`font-bold ${theme.textMain} flex items-center gap-2 mb-2`}><Icons.FileText size={18}/> Riwayat & Nilai</h2>{loadingRaport ? <div className="text-center text-slate-400 py-4">Mengambil data...</div> : raportData.length === 0 ? <div className="text-center text-slate-400 py-4 bg-white rounded-xl border border-slate-200">Belum ada data nilai.</div> : raportData.map((item, idx) => {
-                                const isMedia = (item.audio && item.audio.length > 50) || (item.foto && item.foto.length > 50);
+                                const isMedia = (item.audio && item.audio.length > 10 && item.audio !== "-") || (item.foto && item.foto.length > 10 && item.foto !== "-");
                                 return (
                                 <div key={idx} className={`bg-white p-4 rounded-xl shadow-sm border-l-4 ${theme.activeTab.split(' ')[2]} border border-slate-100`}>
                                     <div className="flex justify-between text-xs text-slate-500 mb-2"><span>Hari ke-{item.hari}</span><span>{new Date(item.waktu).toLocaleDateString()}</span></div>
                                     
-                                    {item.audio && item.audio.length > 50 && <div className="mb-2 bg-blue-50 p-2 rounded border border-blue-100 flex flex-col gap-2"><div className="flex items-center gap-2"><Icons.Play size={12} className="text-blue-600"/><span className="text-xs font-bold text-blue-700">Setoran Audio</span></div><audio controls src={getDirectUrl(item.audio)} className="h-8 w-full rounded" /></div>}
-                                    {item.foto && item.foto.length > 50 && (
+                                    {item.audio && item.audio.length > 10 && item.audio !== "-" && <div className="mb-2 bg-blue-50 p-2 rounded border border-blue-100 flex flex-col gap-2"><div className="flex items-center gap-2"><Icons.Play size={12} className="text-blue-600"/><span className="text-xs font-bold text-blue-700">Setoran Audio</span></div><audio controls src={getDirectUrl(item.audio)} className="h-8 w-full rounded" /></div>}
+                                    {item.foto && item.foto.length > 10 && item.foto !== "-" && (
                                         <div className="mb-2 relative group cursor-pointer" onClick={() => setPreviewImage(getDirectUrl(item.foto))}>
                                             <img src={getDirectUrl(item.foto)} className="h-20 w-full object-cover rounded border border-slate-200" alt="Bukti"/>
                                             <div className="absolute inset-0 bg-black/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition"><Icons.ZoomIn className="text-white drop-shadow-md"/></div>
