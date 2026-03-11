@@ -78,7 +78,16 @@ const getValidMediaUrl = (url) => {
     }
     return url;
 };
-
+        // FUNGSI UNTUK MEMBUAT PEMUTAR AUDIO GOOGLE DRIVE
+const getIframeUrl = (url) => {
+    if (!url || url === "-" || url === "Error save file") return null;
+    const match = url.match(/id=([^&]+)/) || url.match(/\/d\/([a-zA-Z0-9-_]+)\//);
+    if (match && match[1]) {
+        // Mengubahnya menjadi link preview resmi Google
+        return `https://drive.google.com/file/d/${match[1]}/preview`;
+    }
+    return url;
+};
         // --- SISTEM IKON ---
         const LucideIcons = window.lucide ? window.lucide.icons : {};
         const Icon = ({ name, size = 20, className = "", ...props }) => {
@@ -643,14 +652,22 @@ const getValidMediaUrl = (url) => {
                                 <div className="flex justify-between items-start mb-2"><div><h3 className="font-bold text-slate-800 flex items-center gap-2">{item.nama} <span className="text-[10px] bg-slate-100 px-1 rounded text-slate-500">#{item.rowIndex}</span></h3><p className="text-xs text-slate-500">Hari ke-{item.hari} • {item.kelas}</p></div>{activeTab === 'jurnal' && <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-1 rounded-full border border-yellow-200">{item.poin} Poin (Auto)</span>}</div>
                                 {activeTab === 'jurnal' && <div className="bg-slate-50 p-2 rounded-lg text-xs text-slate-600 mb-3 font-mono border border-slate-100">{item.rincian || item.kebaikan}</div>}
                                 
-                                {/* TAMPILAN AUDIO MENGGUNAKAN AUDIO PLAYER */}
+                                {/* TAMPILAN AUDIO MENGGUNAKAN IFRAME GOOGLE DRIVE */}
 {activeTab === 'hafalan' && (
     <div className="mb-3 bg-blue-50 border border-blue-200 p-4 rounded-xl text-center">
         <Icons.Mic size={24} className="text-blue-500 mx-auto mb-3"/>
         <div className="text-sm font-bold text-blue-800 mb-3">Rekaman Audio</div>
         {item.audio && item.audio.includes('drive.google.com') ? (
-            /* Tag Audio HTML5 agar bisa diputar langsung di dashboard */
-            <audio controls src={getValidMediaUrl(item.audio)} className="w-full h-10 outline-none rounded-full" />
+            <div className="w-full rounded-lg overflow-hidden border border-blue-200 shadow-sm bg-white" style={{ height: '70px' }}>
+                 <iframe 
+                     src={getIframeUrl(item.audio)} 
+                     width="100%" 
+                     height="100%" 
+                     allow="autoplay" 
+                     style={{ border: 'none' }} 
+                     title="Audio Player">
+                 </iframe>
+            </div>
         ) : (
             <span className="text-xs text-slate-400 italic bg-white px-3 py-1 rounded-full border border-slate-200">File rekaman tidak tersedia.</span>
         )}
@@ -1214,12 +1231,18 @@ const getValidMediaUrl = (url) => {
                                     <div className="flex justify-between text-xs text-slate-500 mb-3"><span>Hari ke-{item.hari}</span><span>{new Date(item.waktu).toLocaleDateString()}</span></div>
                                     
                                     {hasAudioLink && (
-                                        <div className="mb-3">
-                                            <a href={getValidMediaUrl(item.audio)} target="_blank" rel="noreferrer" className="w-full py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg flex items-center justify-center gap-2 text-xs font-bold shadow-sm hover:bg-blue-100 transition">
-                                                <Icons.Play size={14}/> Putar Audio di Drive
-                                            </a>
-                                        </div>
-                                    )}
+    <div className="mb-3">
+        <div className="w-full rounded-lg overflow-hidden border border-slate-200 bg-white" style={{ height: '60px' }}>
+            <iframe 
+                src={getIframeUrl(item.audio)} 
+                width="100%" 
+                height="100%" 
+                style={{ border: 'none' }} 
+                title="Audio Player">
+            </iframe>
+        </div>
+    </div>
+)}
                                     
                                     {hasFotoLink && (
                                         <div className="mb-3">
@@ -1259,6 +1282,7 @@ const getValidMediaUrl = (url) => {
     </script>
 </body>
 </html>
+
 
 
 
