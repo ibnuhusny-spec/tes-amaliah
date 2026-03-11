@@ -64,11 +64,20 @@
             return Math.abs(hash).toString(36);
         };
 
-        // FUNGSI UNTUK MEMASTIKAN LINK DRIVE VALID DAN BISA DIBUKA DI TAB BARU
-        const getValidMediaUrl = (url) => {
-            if (!url || url === "-" || url === "Error save file" || typeof url !== 'string') return null;
-            return url;
-        };
+        // FUNGSI UNTUK MENGUBAH LINK DRIVE MENJADI DIRECT STREAMING / RAW FILE
+const getValidMediaUrl = (url) => {
+    if (!url || url === "-" || url === "Error save file" || typeof url !== 'string') return null;
+    
+    // Jika link berasal dari Google Drive, kita ekstrak ID-nya dan paksa menjadi raw stream
+    if (url.includes('drive.google.com')) {
+        const match = url.match(/id=([^&]+)/) || url.match(/\/d\/([a-zA-Z0-9-_]+)\//);
+        if (match && match[1]) {
+            // Menggunakan export=download agar <audio> dan <img> membaca file aslinya, bukan halaman webnya
+            return `https://drive.google.com/uc?export=download&id=${match[1]}`;
+        }
+    }
+    return url;
+};
 
         // --- SISTEM IKON ---
         const LucideIcons = window.lucide ? window.lucide.icons : {};
@@ -1250,5 +1259,6 @@
     </script>
 </body>
 </html>
+
 
 
