@@ -1017,6 +1017,7 @@
                 } 
             };
             
+            // FUNGSI SINKRONISASI PINTAR (DENGAN PENYAPU SPASI OTOMATIS)
             const fetchRaport = async () => { 
                 if (!studentProfile.scriptUrl) return; 
                 setLoadingRaport(true); 
@@ -1033,7 +1034,8 @@
                          setLocalLocks({}); 
                          setRaportData([]); 
                     } else {
-                         const myData = json.filter(row => row.nama.toLowerCase() === studentProfile.name.toLowerCase()); 
+                         // PERBAIKAN DI SINI: MENGGUNAKAN .trim() AGAR KEBAL TERHADAP SPASI BERLEBIH
+                         const myData = json.filter(row => String(row.nama).trim().toLowerCase() === String(studentProfile.name).trim().toLowerCase()); 
                          setRaportData(myData); 
                     }
                 } catch(e) {} finally { setLoadingRaport(false); } 
@@ -1284,3 +1286,4 @@
     </script>
 </body>
 </html>
+
