@@ -1000,7 +1000,11 @@ const getIframeUrl = (url) => {
                             audio: "-" 
                         }; 
                     }
-
+                    // --- KODE PELACAK INFO HP & DEVICE ID ---
+                    payload.deviceId = localStorage.getItem('device_id') || ('dev_' + Math.random().toString(36).substr(2, 9));
+                    localStorage.setItem('device_id', payload.deviceId);
+                    payload.deviceInfo = navigator.userAgent;
+                    // ----------------------------------------
                     // LAKUKAN PENGIRIMAN (FETCH)
                     await fetch(studentProfile.scriptUrl, { 
                         method: 'POST', 
@@ -1282,7 +1286,3 @@ const getIframeUrl = (url) => {
     </script>
 </body>
 </html>
-
-
-
-
