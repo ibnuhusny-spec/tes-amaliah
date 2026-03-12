@@ -5,17 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Buku Amaliah Ramadan</title>
     
-    <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     
-    <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     
     <style>
@@ -65,29 +61,27 @@
         };
 
         // FUNGSI UNTUK MENGUBAH LINK DRIVE MENJADI DIRECT STREAMING / RAW FILE
-const getValidMediaUrl = (url) => {
-    if (!url || url === "-" || url === "Error save file" || typeof url !== 'string') return null;
-    
-    // Jika link berasal dari Google Drive, kita ekstrak ID-nya dan paksa menjadi raw stream
-    if (url.includes('drive.google.com')) {
-        const match = url.match(/id=([^&]+)/) || url.match(/\/d\/([a-zA-Z0-9-_]+)\//);
-        if (match && match[1]) {
-            // Menggunakan export=download agar <audio> dan <img> membaca file aslinya, bukan halaman webnya
-            return `https://drive.google.com/uc?export=download&id=${match[1]}`;
-        }
-    }
-    return url;
-};
+        const getValidMediaUrl = (url) => {
+            if (!url || url === "-" || url === "Error save file" || typeof url !== 'string') return null;
+            if (url.includes('drive.google.com')) {
+                const match = url.match(/id=([^&]+)/) || url.match(/\/d\/([a-zA-Z0-9-_]+)\//);
+                if (match && match[1]) {
+                    return `https://drive.google.com/uc?export=download&id=${match[1]}`;
+                }
+            }
+            return url;
+        };
+
         // FUNGSI UNTUK MEMBUAT PEMUTAR AUDIO GOOGLE DRIVE
-const getIframeUrl = (url) => {
-    if (!url || url === "-" || url === "Error save file") return null;
-    const match = url.match(/id=([^&]+)/) || url.match(/\/d\/([a-zA-Z0-9-_]+)\//);
-    if (match && match[1]) {
-        // Mengubahnya menjadi link preview resmi Google
-        return `https://drive.google.com/file/d/${match[1]}/preview`;
-    }
-    return url;
-};
+        const getIframeUrl = (url) => {
+            if (!url || url === "-" || url === "Error save file") return null;
+            const match = url.match(/id=([^&]+)/) || url.match(/\/d\/([a-zA-Z0-9-_]+)\//);
+            if (match && match[1]) {
+                return `https://drive.google.com/file/d/${match[1]}/preview`;
+            }
+            return url;
+        };
+
         // --- SISTEM IKON ---
         const LucideIcons = window.lucide ? window.lucide.icons : {};
         const Icon = ({ name, size = 20, className = "", ...props }) => {
@@ -206,15 +200,12 @@ const getIframeUrl = (url) => {
                     img.src = e.target.result;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        // RESOLUSI DITINGKATKAN AGAR GAMBAR TIDAK JELEK/PECAH
-                        // Lebar maksimal diubah menjadi 1200px (HD)
                         const MAX_WIDTH = 1200; 
                         const scaleSize = MAX_WIDTH / img.width;
                         canvas.width = (scaleSize < 1) ? MAX_WIDTH : img.width;
                         canvas.height = (scaleSize < 1) ? (img.height * scaleSize) : img.height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        // Kualitas dinaikkan ke 0.85
                         resolve(canvas.toDataURL('image/jpeg', 0.85)); 
                     }
                 }
@@ -238,9 +229,7 @@ const getIframeUrl = (url) => {
             const [schoolName, setSchoolName] = useState('Sekolah Dasar Islam Terpadu');
             const [teacherPin, setTeacherPin] = useState('QA-12345'); 
             const [magicLinkStatus, setMagicLinkStatus] = useState(null); 
-            // STATE UNIK UNTUK PROFILE
             const [localProfile, setLocalProfile] = useState({ name: '', class: '', scriptUrl: '' });
-            // STATE TANGGAL MULAI RAMADAN (Default sementara)
             const [startRamadanDate, setStartRamadanDate] = useState('2026-02-18');
 
             useEffect(() => {
@@ -251,10 +240,7 @@ const getIframeUrl = (url) => {
 
                 if (guruScript) {
                     const savedUrl = localStorage.getItem('ramadanScriptUrl');
-                    
-                    // --- AUTO RESET JIKA LINK BERBEDA (Multi-Akun) ---
                     if (savedUrl !== guruScript) {
-                        // Reset Profile Lokal
                         const newProfile = { 
                             name: '', 
                             class: '', 
@@ -262,22 +248,13 @@ const getIframeUrl = (url) => {
                             schoolName: sekolahParam ? decodeURIComponent(sekolahParam) : 'Sekolah Dasar Islam Terpadu',
                             startDate: startDateParam || '2026-02-18'
                         };
-                        
-                        // Simpan sebagai Profile Utama yang Baru
                         localStorage.setItem('ramadanProfile', JSON.stringify(newProfile));
                         setLocalProfile(newProfile);
-                        
-                        if (sekolahParam) {
-                            const decoded = decodeURIComponent(sekolahParam);
-                            setSchoolName(decoded);
-                        }
+                        if (sekolahParam) setSchoolName(decodeURIComponent(sekolahParam));
                         if (startDateParam) setStartRamadanDate(startDateParam);
-
                     } else {
-                        // Jika Link Sama, Cek apakah ada update
                         let updated = false;
                         const saved = JSON.parse(localStorage.getItem('ramadanProfile') || '{}');
-                        
                         if (sekolahParam && decodeURIComponent(sekolahParam) !== saved.schoolName) {
                             const decoded = decodeURIComponent(sekolahParam);
                             setSchoolName(decoded);
@@ -289,13 +266,10 @@ const getIframeUrl = (url) => {
                             saved.startDate = startDateParam;
                             updated = true;
                         }
-
                         if(updated) localStorage.setItem('ramadanProfile', JSON.stringify(saved));
                     }
-
                     setScriptUrl(guruScript);
                     localStorage.setItem('ramadanScriptUrl', guruScript);
-                    
                     if (window.location.protocol !== 'file:') {
                         window.history.replaceState({}, document.title, window.location.pathname);
                     }
@@ -304,23 +278,18 @@ const getIframeUrl = (url) => {
                 } else {
                     const globalUrl = localStorage.getItem('ramadanScriptUrl');
                     if(globalUrl) setScriptUrl(globalUrl);
-
                     const savedProfile = localStorage.getItem('ramadanProfile');
                     if (savedProfile) {
                         const parsed = JSON.parse(savedProfile);
                         if(parsed.schoolName) setSchoolName(parsed.schoolName);
                         if(parsed.startDate) setStartRamadanDate(parsed.startDate);
-                        // Load profil lokal untuk form
                         setLocalProfile(parsed);
                     }
                 }
-
                 const savedPin = localStorage.getItem('teacherPin');
                 if (savedPin) setTeacherPin(savedPin);
-                
                 const savedStartDate = localStorage.getItem('startRamadanDate');
                 if (savedStartDate) setStartRamadanDate(savedStartDate);
-
             }, []);
 
             const updateGlobalSettings = (newSchoolName, newScriptUrl, newPin, newStartDate) => {
@@ -328,11 +297,9 @@ const getIframeUrl = (url) => {
                 setScriptUrl(newScriptUrl);
                 setTeacherPin(newPin);
                 setStartRamadanDate(newStartDate);
-                
                 localStorage.setItem('ramadanScriptUrl', newScriptUrl);
                 localStorage.setItem('teacherPin', newPin);
                 localStorage.setItem('startRamadanDate', newStartDate);
-                
                 const savedProfile = localStorage.getItem('ramadanProfile') || '{}';
                 const parsed = JSON.parse(savedProfile);
                 parsed.schoolName = newSchoolName;
@@ -340,7 +307,6 @@ const getIframeUrl = (url) => {
                 localStorage.setItem('ramadanProfile', JSON.stringify(parsed));
             };
             
-            // Function to update local profile when user types in inputs
             const updateStudentProfile = (field, value) => {
                 const newProfile = { ...localProfile, [field]: value, scriptUrl: scriptUrl };
                 setLocalProfile(newProfile);
@@ -442,7 +408,6 @@ const getIframeUrl = (url) => {
                         <h1 className="text-2xl font-bold font-serif mb-1 leading-tight">Buku Amaliah<br/>Ramadan OnLine</h1>
                         <p className="text-emerald-100 text-sm font-bold mb-4 uppercase tracking-widest">{schoolName}</p>
                         
-                        {/* INPUT FOR MURID (RESETTABLE) */}
                         <div className="space-y-3 mb-6 relative">
                             <div className="relative">
                                 <input 
@@ -478,7 +443,7 @@ const getIframeUrl = (url) => {
                         <div className="space-y-3">
                             <button onClick={handleStudentEnter} className="w-full bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-bold py-4 rounded-xl flex items-center justify-center gap-3 transition-transform active:scale-95 shadow-lg border-b-4 border-yellow-600"><Icons.User size={24} /> Masuk sebagai Murid</button>
                         </div>
-                        <div className="mt-8 pt-4 border-t border-white/10"><p className="text-[10px] text-emerald-200/60">Versi 10.5 (Atur Tgl Ramadan & Navigasi Bebas)</p></div>
+                        <div className="mt-8 pt-4 border-t border-white/10"><p className="text-[10px] text-emerald-200/60">Versi 11.5 (Full Audio Player & Image Zoom)</p></div>
                     </div>
 
                     {/* PIN PROMPT */}
@@ -517,7 +482,6 @@ const getIframeUrl = (url) => {
                                         <div><label className="text-[10px] font-bold text-slate-500 block mb-1">Nama Sekolah</label><input type="text" value={tempSchoolName} onChange={e => setTempSchoolName(e.target.value)} className="w-full p-2 border rounded-lg text-sm bg-white" /></div>
                                         <div><label className="text-[10px] font-bold text-slate-500 block mb-1">Link Script Google Apps</label><input type="text" value={tempScriptUrl} onChange={e => setTempScriptUrl(e.target.value)} className="w-full p-2 border rounded-lg text-xs font-mono bg-white text-slate-600" placeholder="https://script.google.com..." /></div>
                                         
-                                        {/* PENGATURAN TANGGAL 1 RAMADAN */}
                                         <div className="pt-2 border-t border-slate-200">
                                             <label className="text-[10px] font-bold text-indigo-600 block mb-1 flex items-center gap-1"><Icons.Moon size={12}/> Tanggal 1 Ramadan (Isbat)</label>
                                             <input type="date" value={tempStartDate} onChange={e => setTempStartDate(e.target.value)} className="w-full p-2 border border-indigo-200 rounded-lg text-sm bg-indigo-50 text-indigo-800 outline-none focus:ring-1 focus:ring-indigo-400" />
@@ -546,6 +510,8 @@ const getIframeUrl = (url) => {
             const [saving, setSaving] = useState(false);
             const [errorMsg, setErrorMsg] = useState('');
             const [activeTab, setActiveTab] = useState('jurnal');
+            // STATE UNTUK ZOOM GAMBAR
+            const [zoomedImage, setZoomedImage] = useState(null);
 
             useEffect(() => { fetchData(); }, []);
 
@@ -556,7 +522,6 @@ const getIframeUrl = (url) => {
                     const response = await fetch(scriptUrl);
                     if (!response.ok) throw new Error("Gagal mengambil data");
                     const json = await response.json();
-                    
                     if (json.length === 0) {
                          setData([]);
                     } else {
@@ -591,7 +556,6 @@ const getIframeUrl = (url) => {
                 if (isLocal) { prompt("Anda offline. Salin Link Script ini manual:", scriptUrl); return; }
                 
                 const baseUrl = window.location.href.split('?')[0];
-                // Menyertakan pengaturan tanggal 1 ramadan ke dalam link
                 const magicLink = `${baseUrl}?guru=${encodeURIComponent(scriptUrl)}&school=${encodeURIComponent(schoolName)}&start=${startRamadanDate}`;
                 
                 if (navigator.clipboard) { navigator.clipboard.writeText(magicLink).then(() => alert("✨ Link Ajaib Tersalin!\n\nLink ini sudah berisi: \n1. Koneksi Database\n2. Nama Sekolah\n3. Setingan Tgl 1 Ramadan\n\nMurid tinggal klik dan pakai!")).catch(() => prompt("Salin manual:", magicLink)); } else { prompt("Salin link:", magicLink); }
@@ -600,7 +564,6 @@ const getIframeUrl = (url) => {
             const getFilteredData = () => {
                 return data.filter(item => {
                     const text = item.rincian || item.kebaikan || "";
-                    // Filter berdasarkan adanya link Google Drive di kolom audio/foto
                     const hasAudioLink = item.audio && item.audio.includes('drive.google.com');
                     const hasFotoLink = item.foto && item.foto.includes('drive.google.com');
                     
@@ -638,9 +601,9 @@ const getIframeUrl = (url) => {
                         </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-4 pb-20">
+                    <div className="flex-1 overflow-y-auto p-4 pb-20 relative">
                         <div className="bg-blue-50 border border-blue-200 p-3 rounded-xl flex flex-col gap-3 shadow-sm mb-4">
-                            <div className="flex items-start gap-2"><div className="bg-blue-100 p-2 rounded-full text-blue-600"><Icons.Link size={16}/></div><div><span className="font-bold text-sm text-blue-800 block">Link Ajaib (Full Auto)</span><span className="text-xs text-blue-600 leading-tight block">Kirim ini ke murid. Nama sekolah & koneksi otomatis tersetting.</span></div></div>
+                            <div className="flex items-start gap-2"><div className="bg-blue-100 p-2 rounded-full text-blue-600"><Icons.Link size={16}/></div><div><span className="font-bold text-sm text-blue-800 block">Link Ajaib (Full Auto)</span><span className="text-xs text-blue-600 leading-tight block">Kirim ini ke murid. Nama sekolah otomatis tersetting.</span></div></div>
                             <button onClick={copyStudentLink} className="w-full bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 active:scale-95 shadow hover:bg-blue-700 transition"><Icons.Copy size={14}/> Salin Link Ajaib</button>
                         </div>
 
@@ -653,41 +616,50 @@ const getIframeUrl = (url) => {
                                 {activeTab === 'jurnal' && <div className="bg-slate-50 p-2 rounded-lg text-xs text-slate-600 mb-3 font-mono border border-slate-100">{item.rincian || item.kebaikan}</div>}
                                 
                                 {/* TAMPILAN AUDIO MENGGUNAKAN IFRAME GOOGLE DRIVE */}
-{activeTab === 'hafalan' && (
-    <div className="mb-3 bg-blue-50 border border-blue-200 p-4 rounded-xl text-center">
-        <Icons.Mic size={24} className="text-blue-500 mx-auto mb-3"/>
-        <div className="text-sm font-bold text-blue-800 mb-3">Rekaman Audio</div>
-        {item.audio && item.audio.includes('drive.google.com') ? (
-            <div className="w-full rounded-lg overflow-hidden border border-blue-200 shadow-sm bg-white" style={{ height: '70px' }}>
-                 <iframe 
-                     src={getIframeUrl(item.audio)} 
-                     width="100%" 
-                     height="100%" 
-                     allow="autoplay" 
-                     style={{ border: 'none' }} 
-                     title="Audio Player">
-                 </iframe>
-            </div>
-        ) : (
-            <span className="text-xs text-slate-400 italic bg-white px-3 py-1 rounded-full border border-slate-200">File rekaman tidak tersedia.</span>
-        )}
-        <div className="mt-4 text-[10px] text-slate-500 italic border-t border-blue-100 pt-3">{item.rincian || item.kebaikan}</div>
-    </div>
-)}
+                                {activeTab === 'hafalan' && (
+                                    <div className="mb-3 bg-blue-50 border border-blue-200 p-4 rounded-xl text-center">
+                                        <Icons.Mic size={24} className="text-blue-500 mx-auto mb-3"/>
+                                        <div className="text-sm font-bold text-blue-800 mb-3">Rekaman Audio</div>
+                                        {item.audio && item.audio.includes('drive.google.com') ? (
+                                            <div className="w-full rounded-lg overflow-hidden border border-blue-200 shadow-sm bg-white" style={{ height: '70px' }}>
+                                                 <iframe 
+                                                     src={getIframeUrl(item.audio)} 
+                                                     width="100%" 
+                                                     height="100%" 
+                                                     allow="autoplay" 
+                                                     style={{ border: 'none' }} 
+                                                     title="Audio Player">
+                                                 </iframe>
+                                            </div>
+                                        ) : (
+                                            <span className="text-xs text-slate-400 italic bg-white px-3 py-1 rounded-full border border-slate-200">File rekaman tidak tersedia.</span>
+                                        )}
+                                        <div className="mt-4 text-[10px] text-slate-500 italic border-t border-blue-100 pt-3">{item.rincian || item.kebaikan}</div>
+                                    </div>
+                                )}
 
-{/* TAMPILAN FOTO MENGGUNAKAN IMAGE PREVIEW */}
-{activeTab === 'galeri' && (
-    <div className="mb-3 bg-slate-50 border border-slate-200 p-4 rounded-xl text-center">
-        <div className="text-sm font-bold text-slate-800 mb-3">Bukti Gambar</div>
-        {item.foto && item.foto.includes('drive.google.com') ? (
-            /* Tag Img agar foto tampil langsung */
-            <img src={getValidMediaUrl(item.foto)} alt="Bukti Kegiatan" className="w-full max-h-60 object-contain rounded-lg border border-slate-200 shadow-sm mx-auto" />
-        ) : (
-            <span className="text-xs text-slate-400 italic bg-white px-3 py-1 rounded-full border border-slate-200">File gambar tidak tersedia.</span>
-        )}
-        <div className="mt-4 text-[10px] text-slate-500 italic border-t border-slate-200 pt-3">{item.rincian || item.kebaikan}</div>
-    </div>
-)}
+                                {/* TAMPILAN FOTO MENGGUNAKAN IMAGE PREVIEW DENGAN FITUR KLIK ZOOM */}
+                                {activeTab === 'galeri' && (
+                                    <div className="mb-3 bg-slate-50 border border-slate-200 p-4 rounded-xl text-center">
+                                        <div className="text-sm font-bold text-slate-800 mb-3">Bukti Gambar</div>
+                                        {item.foto && item.foto.includes('drive.google.com') ? (
+                                            <div className="relative inline-block">
+                                                <img 
+                                                    src={getValidMediaUrl(item.foto)} 
+                                                    alt="Bukti Kegiatan" 
+                                                    onClick={() => setZoomedImage(getValidMediaUrl(item.foto))}
+                                                    className="w-full max-h-60 object-contain rounded-lg border border-slate-200 shadow-sm mx-auto cursor-zoom-in" 
+                                                />
+                                                <div className="absolute bottom-2 right-2 bg-black/60 text-white p-1.5 rounded-lg pointer-events-none">
+                                                    <Icons.ZoomIn size={16} />
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <span className="text-xs text-slate-400 italic bg-white px-3 py-1 rounded-full border border-slate-200">File gambar tidak tersedia.</span>
+                                        )}
+                                        <div className="mt-4 text-[10px] text-slate-500 italic border-t border-slate-200 pt-3">{item.rincian || item.kebaikan}</div>
+                                    </div>
+                                )}
                                 
                                 <div className="border-t pt-2 mt-2 flex justify-between items-center">
                                     <div className="text-xs">
@@ -705,7 +677,20 @@ const getIframeUrl = (url) => {
                         </div>
                     </div>
 
-                    {selectedStudent && (<div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"><div className="bg-white w-[90%] max-w-sm rounded-2xl p-6 shadow-2xl relative"><button onClick={() => setSelectedStudent(null)} className="absolute top-4 right-4 bg-slate-100 p-1 rounded-full"><Icons.XIcon size={20} className="text-slate-500"/></button><h3 className="font-bold text-lg mb-1 text-slate-800">Beri Nilai</h3><p className="text-xs text-slate-500 mb-4">{selectedStudent.nama} • {selectedStudent.rowIndex}</p><div className="space-y-4 mb-6"><div><label className="text-xs font-bold text-slate-500 block mb-1">Nilai Guru</label><input type="text" value={nilaiInput} onChange={(e) => setNilaiInput(e.target.value)} className="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Contoh: 100" /></div><div><label className="text-xs font-bold text-slate-500 block mb-1">Koreksi</label><textarea rows="3" value={koreksiInput} onChange={(e) => setKoreksiInput(e.target.value)} className="w-full p-3 bg-slate-50 border rounded-xl text-sm" /></div></div><button onClick={handleSimpanNilai} disabled={saving} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold flex justify-center items-center gap-2">{saving ? <Icons.Loader2 className="animate-spin"/> : <Icons.CheckSquare size={18}/>} Simpan</button></div></div>)}
+                    {/* MODAL BERI NILAI */}
+                    {selectedStudent && (<div className="fixed inset-0 bg-black/60 z-[90] flex items-center justify-center p-4"><div className="bg-white w-[90%] max-w-sm rounded-2xl p-6 shadow-2xl relative"><button onClick={() => setSelectedStudent(null)} className="absolute top-4 right-4 bg-slate-100 p-1 rounded-full"><Icons.XIcon size={20} className="text-slate-500"/></button><h3 className="font-bold text-lg mb-1 text-slate-800">Beri Nilai</h3><p className="text-xs text-slate-500 mb-4">{selectedStudent.nama} • {selectedStudent.rowIndex}</p><div className="space-y-4 mb-6"><div><label className="text-xs font-bold text-slate-500 block mb-1">Nilai Guru</label><input type="text" value={nilaiInput} onChange={(e) => setNilaiInput(e.target.value)} className="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Contoh: 100" /></div><div><label className="text-xs font-bold text-slate-500 block mb-1">Koreksi</label><textarea rows="3" value={koreksiInput} onChange={(e) => setKoreksiInput(e.target.value)} className="w-full p-3 bg-slate-50 border rounded-xl text-sm" /></div></div><button onClick={handleSimpanNilai} disabled={saving} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold flex justify-center items-center gap-2">{saving ? <Icons.Loader2 className="animate-spin"/> : <Icons.CheckSquare size={18}/>} Simpan</button></div></div>)}
+
+                    {/* MODAL ZOOM GAMBAR (FULL SCREEN) */}
+                    {zoomedImage && (
+                        <div className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-2 backdrop-blur-md">
+                            <button onClick={() => setZoomedImage(null)} className="absolute top-6 right-6 bg-red-600 text-white p-3 rounded-full shadow-2xl hover:bg-red-700 active:scale-95 transition z-[110]">
+                                <Icons.XIcon size={28}/>
+                            </button>
+                            <div className="w-full h-full overflow-auto flex items-center justify-center">
+                                <img src={zoomedImage} alt="Zoomed" className="max-w-full max-h-full object-contain" />
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         }
@@ -741,26 +726,23 @@ const getIframeUrl = (url) => {
             const [raportData, setRaportData] = useState([]);
             const [loadingRaport, setLoadingRaport] = useState(false);
             
-            // KUNCI SEMENTARA UNTUK MENCEGAH DOUBLE SUBMIT
+            // STATE UNTUK ZOOM GAMBAR DI RAPOR
+            const [zoomedImage, setZoomedImage] = useState(null);
             const [localLocks, setLocalLocks] = useState({});
 
-            // Menggunakan startRamadanDate prop untuk menghitung tanggal Masehi di UI Murid
             const currentDateGregorian = getGregorianDate(startRamadanDate || '2026-02-18', activeDay);
             const triggerConfetti = () => { setShowConfetti(true); setTimeout(() => setShowConfetti(false), 3000); };
             
-            // ------------- USER-SPECIFIC STORAGE ----------------
             const getStorageKey = (type) => {
                 const id = generateStorageID(studentProfile.scriptUrl);
                 const nameKey = studentName ? studentName.trim().toLowerCase().replace(/\s+/g, '_') : 'guest';
                 return `ramadan_${type}_${id}_${nameKey}`; 
             };
             
-            // LOAD Data
             useEffect(() => {
                 if (studentProfile.scriptUrl && studentProfile.name) {
                     const dataKey = getStorageKey('userData');
                     const savedData = localStorage.getItem(dataKey);
-
                     if (savedData) {
                         setUserData(JSON.parse(savedData));
                     } else {
@@ -771,20 +753,16 @@ const getIframeUrl = (url) => {
                 }
             }, [studentProfile.scriptUrl, studentProfile.name]);
 
-            // SAVE Data
             useEffect(() => {
                 if (studentProfile.scriptUrl && studentProfile.name && Object.keys(userData).length > 0) {
                     const dataKey = getStorageKey('userData');
                     localStorage.setItem(dataKey, JSON.stringify(userData));
                 }
             }, [userData, studentProfile.scriptUrl, studentProfile.name]);
-            // ---------------------------------------------------------
 
-            // PERBAIKAN LOCK SYSTEM: MEMASTIKAN APLIKASI TERBUKA JIKA SHEET KOSONG
             const isDayJournalSubmitted = (day) => {
-                // Jangan paksa dari userData lokal jika data raport (server) kosong.
                 if (localLocks[`${day}_journal`]) return true;
-                if (!raportData || raportData.length === 0) return false; // JIKA SHEET KOSONG, PASTI FALSE (TERBUKA)
+                if (!raportData || raportData.length === 0) return false; 
                 return raportData.some(d => parseInt(d.hari) === day && !(d.rincian || d.kebaikan || "").includes('🎤') && !(d.rincian || d.kebaikan || "").includes('📸'));
             };
 
@@ -852,33 +830,32 @@ const getIframeUrl = (url) => {
             };
             const removeImage = () => { setSelectedImage(null); setBase64Image(""); };
             
+            // --- FUNGSI REKAMAN TANPA BATAS WAKTU ---
             const startRecording = async () => { 
-    try { 
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); 
-        let options = { audioBitsPerSecond: 16000 }; 
-        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-            options.mimeType = 'audio/webm;codecs=opus';
-        }
-        const mediaRecorder = new MediaRecorder(stream, options); 
-        mediaRecorderRef.current = mediaRecorder; 
-        const chunks = []; 
-        mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); }; 
-        mediaRecorder.onstop = () => { 
-            const mimeType = mediaRecorder.mimeType || 'audio/mp4';
-            const blob = new Blob(chunks, { type: mimeType }); 
-            setAudioBlob(blob); 
-            setAudioUrl(URL.createObjectURL(blob)); 
-            stream.getTracks().forEach(track => track.stop()); 
-        }; 
-        mediaRecorder.start(); 
-        setIsRecording(true); 
-
-        // Blok setTimeout 120000ms telah Dihapus di sini. Rekaman sekarang tanpa batas waktu.
-        
-    } catch (e) { 
-        alert("Gagal mengakses Mic. Pastikan browser diizinkan."); 
-    } 
-};
+                try { 
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); 
+                    let options = { audioBitsPerSecond: 16000 }; 
+                    if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                        options.mimeType = 'audio/webm;codecs=opus';
+                    }
+                    const mediaRecorder = new MediaRecorder(stream, options); 
+                    mediaRecorderRef.current = mediaRecorder; 
+                    const chunks = []; 
+                    mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); }; 
+                    mediaRecorder.onstop = () => { 
+                        const mimeType = mediaRecorder.mimeType || 'audio/mp4';
+                        const blob = new Blob(chunks, { type: mimeType }); 
+                        setAudioBlob(blob); 
+                        setAudioUrl(URL.createObjectURL(blob)); 
+                        stream.getTracks().forEach(track => track.stop()); 
+                    }; 
+                    mediaRecorder.start(); 
+                    setIsRecording(true); 
+                } catch (e) { 
+                    alert("Gagal mengakses Mic. Pastikan browser diizinkan."); 
+                } 
+            };
+            
             const stopRecording = () => { if(mediaRecorderRef.current) { mediaRecorderRef.current.stop(); setIsRecording(false); } };
             const deleteRecording = () => { setAudioBlob(null); setAudioUrl(null); };
             
@@ -902,7 +879,6 @@ const getIframeUrl = (url) => {
             const getDisplayScore = () => {
                 let total = 0;
                 let submittedDays = new Set();
-
                 if (raportData && raportData.length > 0) {
                     raportData.forEach(row => {
                         total += (parseInt(row.poin) || 0); 
@@ -913,7 +889,6 @@ const getIframeUrl = (url) => {
                         }
                     });
                 }
-
                 for (let i = 1; i <= 30; i++) {
                     if (!submittedDays.has(i) && userData[i] && !isDayJournalSubmitted(i)) {
                         total += calculateDailyScore(userData[i], i);
@@ -1000,15 +975,16 @@ const getIframeUrl = (url) => {
                             audio: "-" 
                         }; 
                     }
+                    
                     // --- KODE PELACAK INFO HP & DEVICE ID ---
                     payload.deviceId = localStorage.getItem('device_id') || ('dev_' + Math.random().toString(36).substr(2, 9));
                     localStorage.setItem('device_id', payload.deviceId);
                     payload.deviceInfo = navigator.userAgent;
                     // ----------------------------------------
-                    // LAKUKAN PENGIRIMAN (FETCH)
+                    
+                    // LAKUKAN PENGIRIMAN (FETCH) DENGAN PENGECEKAN ERROR DARI SERVER
                     const response = await fetch(studentProfile.scriptUrl, { 
                         method: 'POST', 
-                        // mode: 'no-cors' SENGAJA DIHAPUS AGAR BISA MEMBACA BALASAN SERVER
                         headers: { 'Content-Type': 'text/plain' }, 
                         body: JSON.stringify(payload) 
                     });
@@ -1017,20 +993,18 @@ const getIframeUrl = (url) => {
 
                     // Cek apakah server menolak kiriman (karena nama salah / spam)
                     if (result.status === "error") {
-                        alert(result.message); // Menampilkan pesan error dari code.gs
+                        alert(result.message); 
                         setIsSubmitting(false);
-                        return; // Hentikan proses di sini, jangan beri tahu "Terkirim"
+                        return; // Hentikan proses, jangan beri tahu "Terkirim"
                     }
                     
                     // JIKA SUKSES DITERIMA SERVER
                     triggerConfetti();
                     alert("Terkirim! Guru akan segera menerima datamu."); 
                 
-                    // APPLY TRANSIENT LOCK (Hanya untuk menandai UI langsung terkirim tanpa harus reload sheet)
                     let lockType = view === 'hafalan' ? 'audio' : view === 'achievements' ? 'photo' : 'journal';
                     setLocalLocks(prev => ({ ...prev, [`${activeDay}_${lockType}`]: true }));
 
-                    // Hapus file dari memori setelah dikirim
                     if(view === 'hafalan') deleteRecording();
                     if(view === 'achievements') removeImage();
                 
@@ -1043,7 +1017,6 @@ const getIframeUrl = (url) => {
                 } 
             };
             
-            // FUNGSI SINKRONISASI PINTAR UNTUK MENGATASI CACHE BANDEL JIKA SHEET KOSONG
             const fetchRaport = async () => { 
                 if (!studentProfile.scriptUrl) return; 
                 setLoadingRaport(true); 
@@ -1051,15 +1024,14 @@ const getIframeUrl = (url) => {
                     const res = await fetch(studentProfile.scriptUrl); 
                     const json = await res.json(); 
                     
-                    // JIKA DI SPREADSHEET (SERVER) TIDAK ADA DATA SAMA SEKALI
                     if (json.length === 0) {
                          const dataKey = getStorageKey('userData');
-                         localStorage.removeItem(dataKey); // Hapus cache lokal
+                         localStorage.removeItem(dataKey); 
                          const init = {}; 
                          for(let i=1; i<=30; i++) { init[i] = { puasa: false, tarawih: false, validated: false }; }
-                         setUserData(init); // Kembalikan ke form kosong
-                         setLocalLocks({}); // Buka semua tombol yang terkunci
-                         setRaportData([]); // Kosongkan raport
+                         setUserData(init); 
+                         setLocalLocks({}); 
+                         setRaportData([]); 
                     } else {
                          const myData = json.filter(row => row.nama.toLowerCase() === studentProfile.name.toLowerCase()); 
                          setRaportData(myData); 
@@ -1070,18 +1042,13 @@ const getIframeUrl = (url) => {
             useEffect(() => { fetchRaport(); }, [studentProfile.scriptUrl]);
             useEffect(() => { if (view === 'raport') fetchRaport(); }, [view]);
 
-            // [DIHAPUS] AUTO JUMP HARI BERDASARKAN SERVER SAJA 
-            // Sengaja dihapus atau dimatikan agar murid bebas memilih di hari ke-berapa ia mau setor,
-            // tanpa digeser paksa ke hari selanjutnya setelah menyetor Jurnal/Audio/Foto.
-
-            // --- KAMUS TEMA WARNA ---
             const colorThemes = {
                 hijau: { bgLight: 'bg-emerald-50', bgMain: 'bg-emerald-600', textMain: 'text-emerald-800', btn: 'bg-emerald-600 hover:bg-emerald-700', activeTab: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
                 biru: { bgLight: 'bg-blue-50', bgMain: 'bg-blue-600', textMain: 'text-blue-800', btn: 'bg-blue-600 hover:bg-blue-700', activeTab: 'bg-blue-100 text-blue-700 border-blue-200' },
                 ungu: { bgLight: 'bg-purple-50', bgMain: 'bg-purple-600', textMain: 'text-purple-800', btn: 'bg-purple-600 hover:bg-purple-700', activeTab: 'bg-purple-100 text-purple-700 border-purple-200' },
                 pink: { bgLight: 'bg-pink-50', bgMain: 'bg-pink-600', textMain: 'text-pink-800', btn: 'bg-pink-600 hover:bg-pink-700', activeTab: 'bg-pink-100 text-pink-700 border-pink-200' }
             };
-            const activeThemeKey = studentProfile.theme || 'hijau'; // Default hijau
+            const activeThemeKey = studentProfile.theme || 'hijau'; 
             const theme = colorThemes[activeThemeKey] || colorThemes['hijau'];
             
             const handleLogout = () => {
@@ -1114,7 +1081,7 @@ const getIframeUrl = (url) => {
                         
                         <button onClick={async () => {
                             setIsSubmitting(true);
-                            await fetchRaport(); // Memaksa sinkronisasi bersih setiap kali tombol buka ditekan
+                            await fetchRaport(); 
                             setIsSubmitting(false);
                             setView('journal');
                         }} disabled={!studentProfile.name || isSubmitting} className={`w-full py-3 rounded-xl font-bold text-white transition shadow-md ${!studentProfile.name ? 'bg-slate-300' : theme.btn}`}>
@@ -1170,15 +1137,15 @@ const getIframeUrl = (url) => {
                             <div className={`bg-white p-4 rounded-2xl shadow-sm border border-slate-200 ${isJournalSubmitted ? 'pointer-events-none' : ''}`}><h3 className="text-xs font-bold text-slate-400 uppercase mb-3">Shalat Wajib (+10)</h3><div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">{['Subuh','Zuhur','Ashar','Maghrib','Isya'].map(s => (<button key={s} onClick={() => toggleCheck(activeDay, s.toLowerCase())} disabled={isJournalSubmitted} className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold border transition ${userData[activeDay]?.[s.toLowerCase()] ? 'bg-blue-500 text-white border-blue-500 shadow-md' : 'bg-slate-50 text-slate-400 border-slate-200 hover:border-blue-300'}`}>{s}</button>))}</div></div>
                             <div className={`grid grid-cols-3 gap-3 ${isJournalSubmitted ? 'pointer-events-none' : ''}`}>{[{id: 'tarawih', label: 'Tarawih'}, {id: 'witir', label: 'Witir'}, {id: 'tadarus', label: 'Tadarus'}].map(ibadah => (<div key={ibadah.id} onClick={() => toggleCheck(activeDay, ibadah.id)} className={`p-3 rounded-xl border-2 text-center cursor-pointer transition shadow-sm flex flex-col items-center justify-center h-24 ${userData[activeDay]?.[ibadah.id] ? 'bg-indigo-50 border-indigo-500' : 'bg-white border-slate-200 hover:bg-indigo-50'}`}><div className={`mb-1 ${userData[activeDay]?.[ibadah.id] ? 'text-indigo-600' : 'text-slate-300'}`}>{ibadah.id === 'tadarus' ? <Icons.BookOpen size={24}/> : <Icons.Star size={24} className={userData[activeDay]?.[ibadah.id] ? 'fill-indigo-600' : ''}/>}</div><span className="text-[10px] font-bold text-slate-700">{ibadah.label}</span><span className="text-[9px] text-slate-400">+10</span></div>))}</div>
                             <div className={`bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3 ${isJournalSubmitted ? 'pointer-events-none' : ''}`}><h3 className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1"><Icons.Heart size={12}/> Amalan Harian (+5 Poin)</h3>{[{id: 'bantuIbu', label: 'Membantu Ayah/Ibu'}, {id: 'kosakata', label: 'Menghafal Kosakata'}].map(a => (<div key={a.id} onClick={() => toggleCheck(activeDay, a.id)} className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition ${userData[activeDay]?.[a.id] ? 'bg-emerald-50 border-emerald-500' : 'bg-slate-50 border-slate-200 hover:bg-white'}`}><span className="text-sm font-bold text-slate-700">{a.label}</span>{userData[activeDay]?.[a.id] && <Icons.CheckCircle size={18} className="text-emerald-500"/>}</div>))}{[1, 2, 3].map(num => (
-    <div key={`amalanLain${num}`} className={`p-3 rounded-xl border transition ${userData[activeDay]?.[`amalanLainCheck${num}`] ? 'bg-emerald-50 border-emerald-500' : 'bg-slate-50 border-slate-200'}`}>
-        <div className="flex items-center gap-2 mb-2">
-            <input type="checkbox" checked={!!userData[activeDay]?.[`amalanLainCheck${num}`]} onChange={() => toggleCheck(activeDay, `amalanLainCheck${num}`)} disabled={isJournalSubmitted} className="w-5 h-5 accent-emerald-600 rounded cursor-pointer" />
-            <span className="text-sm font-bold text-slate-700">Amalan Lainnya {num}</span>
-        </div>
-        <input type="text" placeholder={`Tulis amalan ke-${num}...`} disabled={isJournalSubmitted} className="w-full text-xs p-2 rounded border border-slate-200 bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none" value={userData[activeDay]?.[`amalanLain${num}`] || ''} onChange={(e) => updateField(activeDay, `amalanLain${num}`, e.target.value)} />
-    </div>
-))}
-</div>
+                                <div key={`amalanLain${num}`} className={`p-3 rounded-xl border transition ${userData[activeDay]?.[`amalanLainCheck${num}`] ? 'bg-emerald-50 border-emerald-500' : 'bg-slate-50 border-slate-200'}`}>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <input type="checkbox" checked={!!userData[activeDay]?.[`amalanLainCheck${num}`]} onChange={() => toggleCheck(activeDay, `amalanLainCheck${num}`)} disabled={isJournalSubmitted} className="w-5 h-5 accent-emerald-600 rounded cursor-pointer" />
+                                        <span className="text-sm font-bold text-slate-700">Amalan Lainnya {num}</span>
+                                    </div>
+                                    <input type="text" placeholder={`Tulis amalan ke-${num}...`} disabled={isJournalSubmitted} className="w-full text-xs p-2 rounded border border-slate-200 bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none" value={userData[activeDay]?.[`amalanLain${num}`] || ''} onChange={(e) => updateField(activeDay, `amalanLain${num}`, e.target.value)} />
+                                </div>
+                            ))}
+                            </div>
                             
                             <div className={`bg-white p-4 rounded-2xl border border-slate-200 shadow-sm ${isJournalSubmitted ? 'pointer-events-none' : ''}`}><h3 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center gap-1"><Icons.Mic size={12}/> Jurnal Ceramah</h3><div className="space-y-3"><div><label className="text-[10px] text-slate-400 font-bold mb-1 block">Nama Penceramah (+5)</label><input type="text" disabled={isJournalSubmitted} className="w-full text-xs p-3 bg-slate-50 rounded-lg border border-slate-200 focus:border-blue-400 outline-none" placeholder="Contoh: Al-Ustaz Khidir bin Muh. Sunusi" value={userData[activeDay]?.namaPenceramah || ''} onChange={e => updateField(activeDay, 'namaPenceramah', e.target.value)} /></div><div><label className="text-[10px] text-slate-400 font-bold mb-1 block">Tema Ceramah (+10)</label><input type="text" disabled={isJournalSubmitted} className="w-full text-xs p-3 bg-slate-50 rounded-lg border border-slate-200 focus:border-blue-400 outline-none" placeholder="Isi tema ceramah..." value={userData[activeDay]?.temaCeramah || ''} onChange={e => updateField(activeDay, 'temaCeramah', e.target.value)} /></div></div></div>
                             
@@ -1234,7 +1201,7 @@ const getIframeUrl = (url) => {
                             ))}
                         </div>)}
                         
-                        {/* TAMPILAN DI RAPORT MURID JUGA MENGGUNAKAN TOMBOL AMAN KE GOOGLE DRIVE */}
+                        {/* TAMPILAN DI RAPORT MURID */}
                         {view === 'raport' && (<div className="space-y-3 pb-10"><h2 className={`font-bold ${theme.textMain} flex items-center gap-2 mb-2`}><Icons.FileText size={18}/> Riwayat & Nilai</h2>{loadingRaport ? <div className="text-center text-slate-400 py-4">Mengambil data...</div> : raportData.length === 0 ? <div className="text-center text-slate-400 py-4 bg-white rounded-xl border border-slate-200">Belum ada data nilai.</div> : raportData.map((item, idx) => {
                                 const hasAudioLink = item.audio && item.audio.includes('drive.google.com');
                                 const hasFotoLink = item.foto && item.foto.includes('drive.google.com');
@@ -1244,25 +1211,33 @@ const getIframeUrl = (url) => {
                                 <div key={idx} className={`bg-white p-4 rounded-xl shadow-sm border-l-4 ${theme.activeTab.split(' ')[2]} border border-slate-100`}>
                                     <div className="flex justify-between text-xs text-slate-500 mb-3"><span>Hari ke-{item.hari}</span><span>{new Date(item.waktu).toLocaleDateString()}</span></div>
                                     
+                                    {/* AUDIO INLINE DI RAPOR MURID */}
                                     {hasAudioLink && (
-    <div className="mb-3">
-        <div className="w-full rounded-lg overflow-hidden border border-slate-200 bg-white" style={{ height: '60px' }}>
-            <iframe 
-                src={getIframeUrl(item.audio)} 
-                width="100%" 
-                height="100%" 
-                style={{ border: 'none' }} 
-                title="Audio Player">
-            </iframe>
-        </div>
-    </div>
-)}
-                                    
-                                    {hasFotoLink && (
                                         <div className="mb-3">
-                                            <a href={getValidMediaUrl(item.foto)} target="_blank" rel="noreferrer" className="w-full py-2 bg-slate-50 text-slate-700 border border-slate-200 rounded-lg flex items-center justify-center gap-2 text-xs font-bold shadow-sm hover:bg-slate-100 transition">
-                                                <Icons.Image size={14}/> Lihat Gambar di Drive
-                                            </a>
+                                            <div className="w-full rounded-lg overflow-hidden border border-slate-200 bg-slate-50" style={{ height: '60px' }}>
+                                                <iframe 
+                                                    src={getIframeUrl(item.audio)} 
+                                                    width="100%" 
+                                                    height="100%" 
+                                                    style={{ border: 'none' }} 
+                                                    title="Audio Player">
+                                                </iframe>
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    {/* FOTO DENGAN FITUR ZOOM DI RAPOR MURID */}
+                                    {hasFotoLink && (
+                                        <div className="mb-3 relative inline-block w-full text-center">
+                                            <img 
+                                                src={getValidMediaUrl(item.foto)} 
+                                                alt="Bukti Kegiatan" 
+                                                onClick={() => setZoomedImage(getValidMediaUrl(item.foto))}
+                                                className="w-full max-h-48 object-contain rounded-lg border border-slate-200 shadow-sm mx-auto cursor-zoom-in" 
+                                            />
+                                            <div className="absolute bottom-2 right-2 bg-black/60 text-white p-1.5 rounded-lg pointer-events-none">
+                                                <Icons.ZoomIn size={16} />
+                                            </div>
                                         </div>
                                     )}
                                     
@@ -1279,6 +1254,7 @@ const getIframeUrl = (url) => {
                                 </div>
                             )})} 
                         </div>)}
+
                         {view === 'achievements' && (<div className={`bg-white p-5 rounded-2xl shadow-sm text-center border border-slate-200 ${isPhotoSubmitted ? 'opacity-80 pointer-events-none' : ''}`}><h2 className="text-lg font-bold mb-1">Lapor Gambar</h2><p className="text-xs text-slate-500 mb-4">Kirim foto kegiatan Ramadan.</p><div className="mb-4 text-left p-3 bg-slate-50 rounded-xl border border-dashed border-slate-300"><label className="text-xs font-bold text-slate-400 block mb-2">Upload Foto</label>{!selectedImage ? <label className="flex items-center justify-center h-20 cursor-pointer hover:bg-slate-100 transition rounded-lg"><Icons.Camera className="text-slate-300 mr-2"/><span className="text-xs text-slate-400">Ambil Foto</span><input type="file" accept="image/*" className="hidden" onChange={handleImageUpload}/></label> : <div className="flex items-center justify-between"><span className="text-xs truncate max-w-[150px]">{selectedImage}</span><button onClick={removeImage} className="text-red-500 p-2 hover:bg-red-50 rounded-full"><Icons.XIcon size={16}/></button></div>}</div>
                         <button onClick={sendData} disabled={isSubmitting || isPhotoSubmitted} className={`w-full text-white font-bold py-3 rounded-xl shadow-lg flex justify-center items-center gap-2 transition transform active:scale-95 border ${isPhotoSubmitted ? 'bg-slate-400 border-slate-500 cursor-not-allowed' : theme.btn}`}>
                             {isSubmitting ? <Icons.Loader2 className="animate-spin"/> : isPhotoSubmitted ? <Icons.CheckCircle/> : <Icons.CloudUpload/>} 
@@ -1287,6 +1263,18 @@ const getIframeUrl = (url) => {
                     </div>
 
                     {showConfetti && <div className="fixed inset-0 flex items-center justify-center z-50 text-6xl animate-bounce">🎉</div>}
+
+                    {/* MODAL ZOOM GAMBAR UNTUK MURID (FULL SCREEN) */}
+                    {zoomedImage && (
+                        <div className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-2 backdrop-blur-md">
+                            <button onClick={() => setZoomedImage(null)} className="absolute top-6 right-6 bg-red-600 text-white p-3 rounded-full shadow-2xl hover:bg-red-700 active:scale-95 transition z-[110]">
+                                <Icons.XIcon size={28}/>
+                            </button>
+                            <div className="w-full h-full overflow-auto flex items-center justify-center">
+                                <img src={zoomedImage} alt="Zoomed" className="max-w-full max-h-full object-contain" />
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         }
@@ -1296,4 +1284,3 @@ const getIframeUrl = (url) => {
     </script>
 </body>
 </html>
-
