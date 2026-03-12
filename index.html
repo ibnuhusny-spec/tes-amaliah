@@ -60,13 +60,16 @@
             return Math.abs(hash).toString(36);
         };
 
-        // FUNGSI UNTUK MENGUBAH LINK DRIVE MENJADI DIRECT STREAMING / RAW FILE
+        // FUNGSI UNTUK MENGUBAH LINK DRIVE MENJADI DIRECT IMAGE (JALUR KHUSUS GOOGLE)
         const getValidMediaUrl = (url) => {
             if (!url || url === "-" || url === "Error save file" || typeof url !== 'string') return null;
+            
+            // Jika link berasal dari Google Drive, kita ekstrak ID-nya
             if (url.includes('drive.google.com')) {
                 const match = url.match(/id=([^&]+)/) || url.match(/\/d\/([a-zA-Z0-9-_]+)\//);
                 if (match && match[1]) {
-                    return `https://drive.google.com/uc?export=download&id=${match[1]}`;
+                    // MENGGUNAKAN JALUR THUMBNAIL API AGAR KEBAL DARI BLOKIRAN BROWSER
+                    return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1000`;
                 }
             }
             return url;
@@ -1286,4 +1289,5 @@
     </script>
 </body>
 </html>
+
 
