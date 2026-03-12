@@ -1006,13 +1006,23 @@ const getIframeUrl = (url) => {
                     payload.deviceInfo = navigator.userAgent;
                     // ----------------------------------------
                     // LAKUKAN PENGIRIMAN (FETCH)
-                    await fetch(studentProfile.scriptUrl, { 
+                    const response = await fetch(studentProfile.scriptUrl, { 
                         method: 'POST', 
-                        mode: 'no-cors', 
+                        // mode: 'no-cors' SENGAJA DIHAPUS AGAR BISA MEMBACA BALASAN SERVER
                         headers: { 'Content-Type': 'text/plain' }, 
                         body: JSON.stringify(payload) 
                     });
                     
+                    const result = await response.json();
+
+                    // Cek apakah server menolak kiriman (karena nama salah / spam)
+                    if (result.status === "error") {
+                        alert(result.message); // Menampilkan pesan error dari code.gs
+                        setIsSubmitting(false);
+                        return; // Hentikan proses di sini, jangan beri tahu "Terkirim"
+                    }
+                    
+                    // JIKA SUKSES DITERIMA SERVER
                     triggerConfetti();
                     alert("Terkirim! Guru akan segera menerima datamu."); 
                 
@@ -1286,3 +1296,4 @@ const getIframeUrl = (url) => {
     </script>
 </body>
 </html>
+
