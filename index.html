@@ -31,6 +31,29 @@
 
     <script type="text/babel" data-presets="react">
         const { useState, useEffect, useRef, useMemo } = React;
+
+        // --- LOGO SVG PERMANEN & UNIVERSAL (DIKEMBANGKAN OLEH IBNU HUSNY) ---
+        const AppLogoPermanen = ({ size = 100 }) => (
+            <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="mx-auto">
+                {/* Lingkaran Background Emerald Soft */}
+                <circle cx="50" cy="50" r="48" fill="#ecfdf5" stroke="#a7f3d0" strokeWidth="3"/>
+                
+                {/* Visualisasi Buku Terbuka Abstrak (Warna Emerald) */}
+                <path d="M28 66C28 62.134 31.134 59 35 59H50V76H35C31.134 76 28 72.866 28 69V66Z" fill="#10b981"/>
+                <path d="M72 66C72 62.134 68.866 59 65 59H50V76H65C68.866 76 72 72.866 72 69V66Z" fill="#059669"/>
+                
+                {/* Efek Kertas Tumpuk */}
+                <path d="M35 59H50V63H35C32.7909 63 31 61.2091 31 59V59C31 56.7909 32.7909 55 35 55H50V59H35Z" fill="#a7f3d0"/>
+                <path d="M65 59H50V63H65C67.2091 63 69 61.2091 69 59V59C69 56.7909 67.2091 55 65 55H50V59H65Z" fill="#6ee7b7"/>
+                
+                {/* Bulan Sabit Ramadan (Warna Emas Amber) */}
+                <path d="M51.313 47.9624C58.3075 48.0673 63.9749 42.4277 64.1205 35.4262C64.1869 32.2359 63.0766 29.3179 61.202 27.0506C61.8845 27.3204 62.5414 27.6493 63.168 28.0336C66.9015 30.3168 69.3788 34.3639 69.3788 38.974C69.3788 46.1365 63.5186 51.9213 56.2483 51.9213C51.5273 51.9213 47.3693 49.4975 45.0312 45.8643C44.6375 45.2536 44.2985 44.6141 44.0177 43.951C46.3154 45.8078 49.2312 46.9174 52.4172 46.9174" fill="#f59e0b"/>
+                
+                {/* Bintang Ramadan */}
+                <path d="M59.3333 21.3333L60.5906 24.5167L63.8584 25.2667L61.2785 27.2583L62.2097 30.495L59.3333 28.6633L56.457 30.495L57.3881 27.2583L54.8083 25.2667L58.0761 24.5167L59.3333 21.3333Z" fill="#fbbf24"/>
+            </svg>
+        );
+        // --------------------------------------------------------------------
         
         const generateStorageID = (url) => {
             if (!url) return 'default';
@@ -66,10 +89,47 @@
 
         const DAFTAR_DOA = [
             { judul: "1. Zikir Ketika Bangun Tidur", arab: "الْحَمْدُ لِلَّهِ الَّذِي أَحْيَانَا بَعْدَ مَا أَمَاتَنَا وَإِلَيْهِ النُّشُورُ", latin: "Alhamdu lillahil-ladzi ahyana ba'da ma amatana wa ilaihin-nushur.", arti: "Segala puji bagi Allah yang menghidupkan kami kembali setelah mematikan kami dan kepada-Nya (kami) akan dibangkitkan." },
-            { judul: "2. Doa Masuk WC", arab: "(بِسْمِ اللهِ) اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنَ الْخُبُثِ وَالْخَبَائِثِ", latin: "(Bismillah) Allahumma inni a'udzu bika minal khubutsi wal khaba-its.", arti: "Ya Allah, sesungguhnya aku berlindung kepada-Mu dari godaan setan laki-laki dan perempuan." },
-            { judul: "3. Doa Keluar WC", arab: "غُفْرَانَكَ", latin: "Ghufranaka.", arti: "Aku memohon ampunan-Mu." },
-            { judul: "4. Zikir Sebelum Berwudu", arab: "بِسْمِ اللهِ", latin: "Bismillah.", arti: "Dengan nama Allah." },
-            { judul: "5. Zikir Keluar Rumah", arab: "بِسْمِ اللهِ ، تَوَكَّلْتُ عَلَى اللهِ ، وَلَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللهِ", latin: "Bismillahi, tawakkaltu 'alallahi, wa laa haula wa laa quwwata illa billah.", arti: "Dengan nama Allah, aku bertawakkal kepada Allah. Tiada daya dan kekuatan kecuali dengan pertolongan Allah." }
+            { judul: "2. Doa Memakai Pakaian", arab: "الْحَمْدُ لِلَّهِ الَّذِي كَسَانِي هَذَا (الثَّوْبَ) وَرَزَقَنِيهِ مِنْ غَيْرِ حَوْلٍ مِنِّي وَلَا قُوَّةٍ", latin: "Alhamdulillahilladzi kasaani hadza (ats-tsauba) wa razaqanihi min ghairi haulin minni wa laa quwwatin.", arti: "Segala puji bagi Allah yang telah memakaikan pakaian ini kepadaku dan mengaruniakannya kepadaku tanpa daya dan kekuatan dariku." },
+            { judul: "3. Mendoakan Orang Memakai Baju Baru", arab: "تُبْلِي وَيُخْلِفُ اللَّهُ تَعَالَى", latin: "Tubli wa yukhliful-lahu ta'ala.", arti: "Kenakanlah sampai lusuh, semoga Allah Ta'ala memberikan gantinya kepadamu." },
+            { judul: "4. Doa Menanggalkan Pakaian", arab: "بِسْمِ اللهِ", latin: "Bismillah.", arti: "Dengan nama Allah." },
+            { judul: "5. Doa Masuk WC", arab: "(بِسْمِ اللهِ) اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنَ الْخُبُثِ وَالْخَبَائِثِ", latin: "(Bismillah) Allahumma inni a'udzu bika minal khubutsi wal khaba-its.", arti: "Ya Allah, sesungguhnya aku berlindung kepada-Mu dari godaan setan laki-laki dan perempuan." },
+            { judul: "6. Doa Keluar WC", arab: "غُفْرَانَكَ", latin: "Ghufranaka.", arti: "Aku memohon ampunan-Mu." },
+            { judul: "7. Zikir Sebelum Berwudu", arab: "بِسْمِ اللهِ", latin: "Bismillah.", arti: "Dengan nama Allah." },
+            { judul: "8. Zikir Setelah Berwudu", arab: "أَشْهَدُ أَنْ لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ وَأَشْهَدُ أَنَّ مُحَمَّدًا عَبْدُهُ وَرَسُولُهُ", latin: "Asyhadu alla ilaha illallah wahdahu la syarika lahu wa asyhadu anna Muhammadan 'abduhu wa rasuluh.", arti: "Aku bersaksi bahwa tidak ada Tuhan selain Allah, dan Muhammad adalah hamba dan utusan-Nya." },
+            { judul: "9. Zikir Keluar Rumah", arab: "بِسْمِ اللهِ ، تَوَكَّلْتُ عَلَى اللهِ ، وَلَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللهِ", latin: "Bismillahi, tawakkaltu 'alallahi, wa laa haula wa laa quwwata illa billah.", arti: "Dengan nama Allah, aku bertawakkal kepada Allah. Tiada daya dan kekuatan kecuali dengan pertolongan Allah." },
+            { judul: "10. Zikir Masuk Rumah", arab: "بِسْمِ اللهِ وَلَجْنَا، وَبِسْمِ اللهِ خَرَجْنَا، وَعَلَى رَبِّنَا تَوَكَّلْنَا", latin: "Bismillahi walajnaa, wa bismillahi kharajnaa, wa 'alaa rabbinaa tawakkalnaa.", arti: "Dengan nama Allah kami masuk, dan dengan nama Allah kami keluar, dan kepada Tuhan kami, kami bertawakkal." },
+            { judul: "11. Doa Pergi ke Masjid", arab: "اللَّهُمَّ اجْعَلْ فِي قَلْبِي نُورًا ، وَفِي لِسَانِي نُورًا", latin: "Allahummaj'al fii qalbii nuura, wa fii lisaanii nuura...", arti: "Ya Allah, jadikanlah cahaya di hatiku dan cahaya di lisanku..." },
+            { judul: "12. Doa Masuk Masjid", arab: "بِسْمِ اللهِ، وَالصَّلَاةُ وَالسَّلَامُ عَلَى رَسُولِ اللهِ، اللَّهُمَّ افْتَحْ لِي أَبْوَابَ رَحْمَتِكَ", latin: "Allahummaftah lii abwaaba rahmatik.", arti: "Ya Allah, bukakanlah untukku pintu-pintu rahmat-Mu." },
+            { judul: "13. Doa Setelah Azan", arab: "اللَّهُمَّ رَبَّ هَذِهِ الدَّعْوَةِ التَّامَّةِ ، وَالصَّلَاةِ الْقَائِمَةِ ، آتِ مُحَمَّدًا الْوَسِيلَةَ وَالْفَضِيلَةَ", latin: "Allahumma rabba hadzihid da'watit tammah, wash-shalaatil qa-imah...", arti: "Ya Allah, Tuhan pemilik panggilan yang sempurna ini dan shalat yang akan didirikan..." },
+            { judul: "14. Doa Istiftah", arab: "سُبْحَانَكَ اللَّهُمَّ وَبِحَمْدِكَ ، وَتَبَارَكَ اسْمُكَ ، وَتَعَالَى جَدُّكَ ، وَلَا إِلَهَ غَيْرُكَ", latin: "Subhanakallahumma wa bihamdika...", arti: "Maha Suci Engkau Ya Allah, aku memuji-Mu..." },
+            { judul: "15. Doa Ruku'", arab: "سُبْحَانَ رَبِّيَ الْعَظِيمِ", latin: "Subhaana rabbiyal 'azhiim.", arti: "Maha Suci Tuhanku Yang Maha Agung." },
+            { judul: "16. Doa Bangkit dari Ruku'", arab: "سَمِعَ اللَّهُ لِمَنْ حَمِدَهُ ... رَبَّنَا وَلَكَ الْحَمْدُ", latin: "Sami'allahu liman hamidah... Rabbana wa lakal hamd.", arti: "Allah mendengar orang yang memuji-Nya... Ya Tuhan kami, bagi-Mu segala puji." },
+            { judul: "17. Doa Sujud", arab: "سُبْحَانَ رَبِّيَ الْأَعْلَى", latin: "Subhaana rabbiyal a'la.", arti: "Maha Suci Tuhanku Yang Maha Tinggi." },
+            { judul: "18. Doa Duduk Antara Dua Sujud", arab: "رَبِّ اغْفِرْ لِي ، رَبِّ اغْفِرْ لِي", latin: "Rabbighfirlii, Rabbighfirlii.", arti: "Ya Tuhanku ampunilah aku." },
+            { judul: "19. Doa Sujud Tilawah", arab: "سَجَدَ وَجْهِيَ لِلَّذِي خَلَقَهُ، وَشَقَّ سَمْعَهُ وَبَصَرَهُ", latin: "Sajada wajhiya lilladzi khalaqahu, wa syaqqa sam'ahu wa basharahu.", arti: "Wajahku bersujud kepada Dzat yang menciptakannya, yang membuka pendengaran dan penglihatannya." },
+            { judul: "20. Bacaan Tasyahud", arab: "التَّحِيَّاتُ لِلَّهِ، وَالصَّلَوَاتُ، وَالطَّيِّبَاتُ", latin: "Attahiyyatu lillah wash-shalawatu wath-thayyibat...", arti: "Segala penghormatan, shalawat, dan kebaikan hanya milik Allah..." },
+            { judul: "21. Bacaan Shalawat Nabi", arab: "اللَّهُمَّ صَلِّ عَلَى مُحَمَّدٍ، وَعَلَى آلِ مُحَمَّدٍ", latin: "Allahumma shalli 'ala Muhammad wa 'ala aali Muhammad...", arti: "Ya Allah, berilah rahmat kepada Muhammad dan keluarga Muhammad..." },
+            { judul: "22. Doa Sebelum Salam", arab: "اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنْ عَذَابِ الْقَبْرِ، وَمِنْ عَذَابِ جَهَنَّمَ", latin: "Allahumma inni a'udzu bika min 'adzabil qabri, wa min 'adzabi jahannam...", arti: "Ya Allah, sesungguhnya aku berlindung kepada-Mu dari siksa kubur dan neraka Jahannam..." },
+            { judul: "23. Doa Qunut Witir", arab: "اللَّهُمَّ اهْدِنِي فِيمَنْ هَدَيْتَ ، وَعَافِنِي فِيمَنْ عَافَيْتَ", latin: "Allahummahdinii fiiman hadait, wa 'aafinii fiiman 'aafait...", arti: "Ya Allah, berilah aku petunjuk..." },
+            { judul: "24. Zikir Setelah Witir", arab: "سُبْحَانَ الْمَلِكِ الْقُدُّوسِ", latin: "Subhanal malikil quddus.", arti: "Maha Suci Allah Raja Yang Maha Suci." },
+            { judul: "25. Doa Ditimpa Kesusahan", arab: "لَا إِلَهَ إِلَّا اللَّهُ الْعَظِيمُ الْحَلِيمُ", latin: "Laa ilaha illallahul 'azhimul halim...", arti: "Tiada Tuhan selain Allah Yang Maha Agung lagi Maha Santun..." },
+            { judul: "26. Doa Menghadapi Kesulitan", arab: "اللَّهُمَّ لَا سَهْلَ إِلَّا مَا جَعَلْتَهُ سَهْلًا", latin: "Allahumma laa sahla illa maa ja'altahu sahlaa...", arti: "Ya Allah, tidak ada kemudahan kecuali yang Engkau jadikan mudah..." },
+            { judul: "27. Doa Menjenguk Orang Sakit", arab: "لَا بَأْسَ طَهُورٌ إِنْ شَاءَ اللَّهُ", latin: "Laa ba'sa thahuurun insyaa Allah.", arti: "Tidak mengapa, semoga sakitmu ini membersihkan dosamu, insya Allah." },
+            { judul: "28. Doa Tertimpa Musibah", arab: "إِنَّا لِلَّهِ وَإِنَّا إِلَيْهِ رَاجِعُونَ، اللَّهُمَّ أْجُرْنِي فِي مُصِيبَتِي", latin: "Inna lillahi wa inna ilaihi raji'un...", arti: "Sesungguhnya kami milik Allah dan kepada-Nya kami kembali..." },
+            { judul: "29. Doa Mendengar Halilintar", arab: "سُبْحَانَ الَّذِي يُسَبِّحُ الرَّعْدُ بِحَمْدِهِ", latin: "Subhanalladzi yusabbihur ra'du bihamdihi...", arti: "Maha Suci Allah yang petir bertasbih dengan memuji-Nya..." },
+            { judul: "30. Doa Melihat Hujan", arab: "اللَّهُمَّ صَيِّبًا نَافِعًا", latin: "Allahumma shayyiban nafi'an.", arti: "Ya Allah, turunkanlah hujan yang bermanfaat." },
+            { judul: "31. Zikir Setelah Hujan", arab: "مُطِرْنَا بِفَضْلِ اللَّهِ وَرَحْمَتِهِ", latin: "Muthirnaa bifadhlillahi wa rahmatih.", arti: "Kita diberi hujan karena karunia dan rahmat Allah." },
+            { judul: "32. Doa Hujan Berhenti", arab: "اللَّهُمَّ حَوَالَيْنَا وَلَا عَلَيْنَا", latin: "Allahumma hawalaina wa laa 'alaina.", arti: "Ya Allah, turunkanlah hujan di sekitar kami, bukan di atas kami." },
+            { judul: "33. Doa Melihat Bulan Sabit", arab: "اللَّهُمَّ أَهِلَّهُ عَلَيْنَا بِالْأَمْنِ وَالْإِيمَانِ", latin: "Allahumma ahillahu 'alaina bil amni wal iimaan...", arti: "Ya Allah, jadikanlah hilal ini bagi kami membawa keamanan dan keimanan..." },
+            { judul: "34. Doa Berbuka Puasa", arab: "ذَهَبَ الظَّمَأُ وَابْتَلَّتِ الْعُرُوقُ وَثَبَتَ الْأَجْرُ إِنْ شَاءَ اللَّهُ", latin: "Dzahabadh zhama-u wabtallatil 'uruuqu wa tsabatal ajru insyaa Allah.", arti: "Telah hilang dahaga, telah basah urat-urat, dan telah tetap pahala, insya Allah." },
+            { judul: "35. Berbuka di Tempat Orang", arab: "أَفْطَرَ عِنْدَكُمُ الصَّائِمُونَ", latin: "Afthara 'indakumush shaa-imuuna...", arti: "Semoga orang-orang yang berpuasa berbuka di tempat kalian..." },
+            { judul: "36. Doa Sebelum Makan", arab: "بِسْمِ اللهِ", latin: "Bismillah.", arti: "Dengan nama Allah." },
+            { judul: "37. Jika Dicela Saat Puasa", arab: "إِنِّي صَائِمٌ", latin: "Inni shaa-imun.", arti: "Sesungguhnya aku sedang berpuasa." },
+            { judul: "38. Doa Ketika Marah", arab: "أَعُوذُ بِاللَّهِ مِنَ الشَّيْطَانِ الرَّجِيمِ", latin: "A'udzu billahi minasy syaithanir rajiim.", arti: "Aku berlindung kepada Allah dari godaan setan." },
+            { judul: "39. Melihat Orang Kena Musibah", arab: "الْحَمْدُ لِلَّهِ الَّذِي عَافَانِي مِمَّا ابْتَلَاكَ بِهِ", latin: "Alhamdulillahilladzi 'aafaanii mimmab talaaka bihi...", arti: "Segala puji bagi Allah yang telah menyelamatkan aku dari musibah yang menimpamu..." },
+            { judul: "40. Doa Kebaikan Orang Lain", arab: "جَزَاكَ اللَّهُ خَيْرًا", latin: "Jazakallahu khairan.", arti: "Semoga Allah membalasmu dengan kebaikan." },
+            { judul: "41. Perlindungan Dajjal", arab: "اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنْ ... وَمِنْ شَرِّ فِتْنَةِ الْمَسِيحِ الدَّجَّالِ", latin: "Allahumma inni a'udzu bika min... fitnatil masiihid dajjal.", arti: "Ya Allah, aku berlindung dari fitnah Dajjal." },
+            { judul: "42. Doa Takut Syirik", arab: "اللَّهُمَّ إِنِّي أَعُوذُ بِكَ أَنْ أُشْرِكَ بِكَ وَأَنَا أَعْلَمُ", latin: "Allahumma inni a'udzu bika an usyrika bika wa anaa a'lam...", arti: "Ya Allah, aku berlindung kepada-Mu dari menyekutukan-Mu padahal aku mengetahui..." }
         ];
 
         const getGregorianDate = (startDate, dayIndex) => {
@@ -201,7 +261,6 @@
             useEffect(() => { setTempSchoolName(schoolName); }, [schoolName]);
             useEffect(() => { setTempStartDate(startRamadanDate); }, [startRamadanDate]);
 
-            // VALIDASI PIN KE SERVER SECARA LANGSUNG
             const handlePinSubmit = async () => {
                 if (!scriptUrl) {
                     if (inputPin === '12345') { setViewState('admin_panel'); setInputPin(''); } 
@@ -256,10 +315,13 @@
                 <div className="h-full bg-gradient-to-b from-emerald-600 to-emerald-800 flex flex-col items-center justify-center p-6 text-white relative overflow-y-auto">
                     <button onClick={() => setViewState('pin_prompt')} className="absolute top-4 right-4 bg-white/10 p-2 rounded-full hover:bg-white/20 transition backdrop-blur-sm z-10"><Icons.Settings size={20} className="text-white" /></button>
 
-                    <div className="bg-white/10 backdrop-blur-md p-6 rounded-3xl w-full border border-white/20 shadow-xl text-center mt-8">
-                        <div className="w-24 h-24 bg-white rounded-full mx-auto mb-4 flex items-center justify-center shadow-lg border-4 border-emerald-200">
-                            <Icons.BookOpen className="text-emerald-600" size={40} />
+                    <div className="bg-white/10 backdrop-blur-md p-6 rounded-3xl w-full border border-white/20 shadow-xl text-center mt-4">
+                        
+                        {/* TAMPILAN LOGO PERMANEN & UNIVERSAL */}
+                        <div className="mb-5 text-center relative z-10 p-1">
+                            <AppLogoPermanen size={95} />
                         </div>
+
                         <h1 className="text-2xl font-bold font-serif mb-1 leading-tight">Buku Amaliah<br/>Ramadan OnLine</h1>
                         <p className="text-emerald-100 text-xs font-bold mb-4 uppercase tracking-widest">{schoolName}</p>
                         
@@ -278,7 +340,7 @@
                         <div className="space-y-3">
                             <button onClick={() => { if(!profile.name) alert("Isi nama dulu!"); else setRole('student'); }} className="w-full bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-bold py-4 rounded-xl flex items-center justify-center gap-3 transition-transform active:scale-95 shadow-lg border-b-4 border-yellow-600"><Icons.User size={24} /> Masuk sebagai Murid</button>
                         </div>
-                        <div className="mt-6 pt-4 border-t border-white/10"><p className="text-[10px] text-emerald-200/60">Versi 12.0 (Server Secured PIN)</p></div>
+                        <div className="mt-6 pt-4 border-t border-white/10"><p className="text-[10px] text-emerald-200/60">Versi 12.0 (Universal Logo & Server Secured PIN)</p></div>
                     </div>
 
                     {viewState === 'pin_prompt' && (
@@ -584,6 +646,7 @@
             if (view === 'cover') return (
                 <div className={`h-full ${theme.bgLight} p-6 flex flex-col items-center justify-center text-center font-sans overflow-hidden transition-colors duration-300`}>
                     <div className="bg-white p-6 rounded-3xl shadow-xl w-full border border-slate-100">
+                        <div className="mb-4 relative z-10"><AppLogoPermanen size={80} /></div>
                         <h1 className={`text-xl font-bold ${theme.textMain} mb-2`}>Assalamu'alaikum, Murid Sholeh!</h1>
                         <input type="text" className="w-full p-3 border rounded-xl mb-3 outline-none focus:ring-2 focus:ring-emerald-300" placeholder="Nama Lengkap" value={studentProfile.name} onChange={e => setStudentProfile({...studentProfile, name: e.target.value})} />
                         <input type="text" className="w-full p-3 border rounded-xl mb-4 outline-none focus:ring-2 focus:ring-emerald-300" placeholder="Kelas" value={studentProfile.class} onChange={e => setStudentProfile({...studentProfile, class: e.target.value})} />
