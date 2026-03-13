@@ -7,11 +7,8 @@
     
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
     <script src="https://cdn.tailwindcss.com"></script>
-
     <script src="https://unpkg.com/lucide@latest"></script>
     
     <style>
@@ -23,205 +20,81 @@
         .animate-in { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         
-        .night-sky {
-            background: linear-gradient(to bottom, #0f172a, #312e81);
-            position: relative;
-            overflow: hidden;
-        }
-        .star {
-            position: absolute;
-            background: white;
-            border-radius: 50%;
-            opacity: 0.7;
-            animation: twinkle 2s infinite ease-in-out;
-        }
+        .night-sky { background: linear-gradient(to bottom, #0f172a, #312e81); position: relative; overflow: hidden; }
+        .star { position: absolute; background: white; border-radius: 50%; opacity: 0.7; animation: twinkle 2s infinite ease-in-out; }
         @keyframes twinkle { 0%, 100% { opacity: 0.7; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.8); } }
-        
-        /* Disabled State Styles */
         .disabled-card { opacity: 0.7; pointer-events: none; filter: grayscale(0.2); }
     </style>
 </head>
 <body>
-
     <div id="root"></div>
 
     <script type="text/babel" data-presets="react">
         const { useState, useEffect, useRef, useMemo } = React;
         
-        // --- HELPER UNIK UNTUK MEMISAHKAN DATA KELAS ---
         const generateStorageID = (url) => {
             if (!url) return 'default';
-            let hash = 0;
-            for (let i = 0; i < url.length; i++) {
-                const char = url.charCodeAt(i);
-                hash = ((hash << 5) - hash) + char;
-                hash = hash & hash;
-            }
+            let hash = 0; for (let i = 0; i < url.length; i++) { const char = url.charCodeAt(i); hash = ((hash << 5) - hash) + char; hash = hash & hash; }
             return Math.abs(hash).toString(36);
         };
 
-        // FUNGSI UNTUK MENGUBAH LINK DRIVE MENJADI DIRECT IMAGE (JALUR KHUSUS GOOGLE)
         const getValidMediaUrl = (url) => {
             if (!url || url === "-" || url === "Error save file" || typeof url !== 'string') return null;
-            
-            // Jika link berasal dari Google Drive, kita ekstrak ID-nya
             if (url.includes('drive.google.com')) {
                 const match = url.match(/id=([^&]+)/) || url.match(/\/d\/([a-zA-Z0-9-_]+)\//);
-                if (match && match[1]) {
-                    // MENGGUNAKAN JALUR THUMBNAIL API AGAR KEBAL DARI BLOKIRAN BROWSER
-                    return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1000`;
-                }
+                if (match && match[1]) return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1000`;
             }
             return url;
         };
 
-        // FUNGSI UNTUK MEMBUAT PEMUTAR AUDIO GOOGLE DRIVE
         const getIframeUrl = (url) => {
             if (!url || url === "-" || url === "Error save file") return null;
             const match = url.match(/id=([^&]+)/) || url.match(/\/d\/([a-zA-Z0-9-_]+)\//);
-            if (match && match[1]) {
-                return `https://drive.google.com/file/d/${match[1]}/preview`;
-            }
+            if (match && match[1]) return `https://drive.google.com/file/d/${match[1]}/preview`;
             return url;
         };
 
-        // --- SISTEM IKON ---
         const LucideIcons = window.lucide ? window.lucide.icons : {};
         const Icon = ({ name, size = 20, className = "", ...props }) => {
             const camelName = name.charAt(0).toLowerCase() + name.slice(1);
             const iconData = LucideIcons[camelName] || LucideIcons[Object.keys(LucideIcons).find(k => k.toLowerCase() === name.toLowerCase())];
             if (!iconData) return <span className={`inline-block bg-slate-200 rounded ${className}`} style={{width:size, height:size}}></span>;
-            return (
-                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
-                    {iconData.map((shape, i) => React.createElement(shape[0], { ...shape[1], key: i }))}
-                </svg>
-            );
+            return <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>{iconData.map((shape, i) => React.createElement(shape[0], { ...shape[1], key: i }))}</svg>;
         };
 
-        const Icons = {
-            Star: (p) => <Icon name="Star" {...p} />,
-            Moon: (p) => <Icon name="Moon" {...p} />,
-            Sun: (p) => <Icon name="Sun" {...p} />,
-            CloudSun: (p) => <Icon name="CloudSun" {...p} />,
-            BookOpen: (p) => <Icon name="BookOpen" {...p} />,
-            CheckCircle: (p) => <Icon name="CheckCircle" {...p} />,
-            Award: (p) => <Icon name="Award" {...p} />,
-            ChevronLeft: (p) => <Icon name="ChevronLeft" {...p} />,
-            ChevronRight: (p) => <Icon name="ChevronRight" {...p} />,
-            User: (p) => <Icon name="User" {...p} />,
-            Settings: (p) => <Icon name="Settings" {...p} />,
-            Camera: (p) => <Icon name="Camera" {...p} />,
-            XIcon: (p) => <Icon name="X" {...p} />,
-            Mic: (p) => <Icon name="Mic" {...p} />,
-            PenTool: (p) => <Icon name="PenTool" {...p} />,
-            StopCircle: (p) => <Icon name="StopCircle" {...p} />,
-            Play: (p) => <Icon name="Play" {...p} />,
-            CloudUpload: (p) => <Icon name="CloudUpload" {...p} />,
-            Lock: (p) => <Icon name="Lock" {...p} />,
-            LogOut: (p) => <Icon name="LogOut" {...p} />,
-            FileText: (p) => <Icon name="FileText" {...p} />,
-            CheckSquare: (p) => <Icon name="CheckSquare" {...p} />,
-            Eye: (p) => <Icon name="Eye" {...p} />,
-            EyeOff: (p) => <Icon name="EyeOff" {...p} />,
-            Save: (p) => <Icon name="Save" {...p} />,
-            Wifi: (p) => <Icon name="Wifi" {...p} />,
-            WifiOff: (p) => <Icon name="WifiOff" {...p} />,
-            Share2: (p) => <Icon name="Share2" {...p} />,
-            Loader2: (p) => <Icon name="Loader2" {...p} />,
-            Trophy: (p) => <Icon name="Trophy" {...p} />,
-            Heart: (p) => <Icon name="Heart" {...p} />,
-            Book: (p) => <Icon name="Book" {...p} />,
-            Shield: (p) => <Icon name="Shield" {...p} />,
-            ArrowRight: (p) => <Icon name="ArrowRight" {...p} />,
-            Copy: (p) => <Icon name="Copy" {...p} />,
-            Link: (p) => <Icon name="Link" {...p} />,
-            Image: (p) => <Icon name="Image" {...p} />,
-            List: (p) => <Icon name="List" {...p} />,
-            AlertTriangle: (p) => <Icon name="AlertTriangle" {...p} />,
-            ZoomIn: (p) => <Icon name="ZoomIn" {...p} />
-        };
+        const Icons = { Star: (p) => <Icon name="Star" {...p} />, Moon: (p) => <Icon name="Moon" {...p} />, Sun: (p) => <Icon name="Sun" {...p} />, CloudSun: (p) => <Icon name="CloudSun" {...p} />, BookOpen: (p) => <Icon name="BookOpen" {...p} />, CheckCircle: (p) => <Icon name="CheckCircle" {...p} />, Award: (p) => <Icon name="Award" {...p} />, ChevronLeft: (p) => <Icon name="ChevronLeft" {...p} />, ChevronRight: (p) => <Icon name="ChevronRight" {...p} />, User: (p) => <Icon name="User" {...p} />, Settings: (p) => <Icon name="Settings" {...p} />, Camera: (p) => <Icon name="Camera" {...p} />, XIcon: (p) => <Icon name="X" {...p} />, Mic: (p) => <Icon name="Mic" {...p} />, PenTool: (p) => <Icon name="PenTool" {...p} />, StopCircle: (p) => <Icon name="StopCircle" {...p} />, Play: (p) => <Icon name="Play" {...p} />, CloudUpload: (p) => <Icon name="CloudUpload" {...p} />, Lock: (p) => <Icon name="Lock" {...p} />, LogOut: (p) => <Icon name="LogOut" {...p} />, FileText: (p) => <Icon name="FileText" {...p} />, CheckSquare: (p) => <Icon name="CheckSquare" {...p} />, Eye: (p) => <Icon name="Eye" {...p} />, EyeOff: (p) => <Icon name="EyeOff" {...p} />, Save: (p) => <Icon name="Save" {...p} />, Wifi: (p) => <Icon name="Wifi" {...p} />, WifiOff: (p) => <Icon name="WifiOff" {...p} />, Share2: (p) => <Icon name="Share2" {...p} />, Loader2: (p) => <Icon name="Loader2" {...p} />, Trophy: (p) => <Icon name="Trophy" {...p} />, Heart: (p) => <Icon name="Heart" {...p} />, Book: (p) => <Icon name="Book" {...p} />, Shield: (p) => <Icon name="Shield" {...p} />, ArrowRight: (p) => <Icon name="ArrowRight" {...p} />, Copy: (p) => <Icon name="Copy" {...p} />, Link: (p) => <Icon name="Link" {...p} />, Image: (p) => <Icon name="Image" {...p} />, List: (p) => <Icon name="List" {...p} />, AlertTriangle: (p) => <Icon name="AlertTriangle" {...p} />, ZoomIn: (p) => <Icon name="ZoomIn" {...p} /> };
 
-        // --- DZIKIR LENGKAP (42 ITEM) ---
         const DAFTAR_DOA = [
             { judul: "1. Zikir Ketika Bangun Tidur", arab: "الْحَمْدُ لِلَّهِ الَّذِي أَحْيَانَا بَعْدَ مَا أَمَاتَنَا وَإِلَيْهِ النُّشُورُ", latin: "Alhamdu lillahil-ladzi ahyana ba'da ma amatana wa ilaihin-nushur.", arti: "Segala puji bagi Allah yang menghidupkan kami kembali setelah mematikan kami dan kepada-Nya (kami) akan dibangkitkan." },
-            { judul: "2. Doa Memakai Pakaian", arab: "الْحَمْدُ لِلَّهِ الَّذِي كَسَانِي هَذَا (الثَّوْبَ) وَرَزَقَنِيهِ مِنْ غَيْرِ حَوْلٍ مِنِّي وَلَا قُوَّةٍ", latin: "Alhamdulillahilladzi kasaani hadza (ats-tsauba) wa razaqanihi min ghairi haulin minni wa laa quwwatin.", arti: "Segala puji bagi Allah yang telah memakaikan pakaian ini kepadaku dan mengaruniakannya kepadaku tanpa daya dan kekuatan dariku." },
-            { judul: "3. Mendoakan Orang Memakai Baju Baru", arab: "تُبْلِي وَيُخْلِفُ اللَّهُ تَعَالَى", latin: "Tubli wa yukhliful-lahu ta'ala.", arti: "Kenakanlah sampai lusuh, semoga Allah Ta'ala memberikan gantinya kepadamu." },
-            { judul: "4. Doa Menanggalkan Pakaian", arab: "بِسْمِ اللهِ", latin: "Bismillah.", arti: "Dengan nama Allah." },
-            { judul: "5. Doa Masuk WC", arab: "(بِسْمِ اللهِ) اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنَ الْخُبُثِ وَالْخَبَائِثِ", latin: "(Bismillah) Allahumma inni a'udzu bika minal khubutsi wal khaba-its.", arti: "Ya Allah, sesungguhnya aku berlindung kepada-Mu dari godaan setan laki-laki dan perempuan." },
-            { judul: "6. Doa Keluar WC", arab: "غُفْرَانَكَ", latin: "Ghufranaka.", arti: "Aku memohon ampunan-Mu." },
-            { judul: "7. Zikir Sebelum Berwudu", arab: "بِسْمِ اللهِ", latin: "Bismillah.", arti: "Dengan nama Allah." },
-            { judul: "8. Zikir Setelah Berwudu", arab: "أَشْهَدُ أَنْ لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ وَأَشْهَدُ أَنَّ مُحَمَّدًا عَبْدُهُ وَرَسُولُهُ", latin: "Asyhadu alla ilaha illallah wahdahu la syarika lahu wa asyhadu anna Muhammadan 'abduhu wa rasuluh.", arti: "Aku bersaksi bahwa tidak ada Tuhan selain Allah, dan Muhammad adalah hamba dan utusan-Nya." },
-            { judul: "9. Zikir Keluar Rumah", arab: "بِسْمِ اللهِ ، تَوَكَّلْتُ عَلَى اللهِ ، وَلَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللهِ", latin: "Bismillahi, tawakkaltu 'alallahi, wa laa haula wa laa quwwata illa billah.", arti: "Dengan nama Allah, aku bertawakkal kepada Allah. Tiada daya dan kekuatan kecuali dengan pertolongan Allah." },
-            { judul: "10. Zikir Masuk Rumah", arab: "بِسْمِ اللهِ وَلَجْنَا، وَبِسْمِ اللهِ خَرَجْنَا، وَعَلَى رَبِّنَا تَوَكَّلْنَا", latin: "Bismillahi walajnaa, wa bismillahi kharajnaa, wa 'alaa rabbinaa tawakkalnaa.", arti: "Dengan nama Allah kami masuk, dan dengan nama Allah kami keluar, dan kepada Tuhan kami, kami bertawakkal." },
-            { judul: "11. Doa Pergi ke Masjid", arab: "اللَّهُمَّ اجْعَلْ فِي قَلْبِي نُورًا ، وَفِي لِسَانِي نُورًا", latin: "Allahummaj'al fii qalbii nuura, wa fii lisaanii nuura...", arti: "Ya Allah, jadikanlah cahaya di hatiku dan cahaya di lisanku..." },
-            { judul: "12. Doa Masuk Masjid", arab: "بِسْمِ اللهِ، وَالصَّلَاةُ وَالسَّلَامُ عَلَى رَسُولِ اللهِ، اللَّهُمَّ افْتَحْ لِي أَبْوَابَ رَحْمَتِكَ", latin: "Allahummaftah lii abwaaba rahmatik.", arti: "Ya Allah, bukakanlah untukku pintu-pintu rahmat-Mu." },
-            { judul: "13. Doa Setelah Azan", arab: "اللَّهُمَّ رَبَّ هَذِهِ الدَّعْوَةِ التَّامَّةِ ، وَالصَّلَاةِ الْقَائِمَةِ ، آتِ مُحَمَّدًا الْوَسِيلَةَ وَالْفَضِيلَةَ", latin: "Allahumma rabba hadzihid da'watit tammah, wash-shalaatil qa-imah...", arti: "Ya Allah, Tuhan pemilik panggilan yang sempurna ini dan shalat yang akan didirikan..." },
-            { judul: "14. Doa Istiftah", arab: "سُبْحَانَكَ اللَّهُمَّ وَبِحَمْدِكَ ، وَتَبَارَكَ اسْمُكَ ، وَتَعَالَى جَدُّكَ ، وَلَا إِلَهَ غَيْرُكَ", latin: "Subhanakallahumma wa bihamdika...", arti: "Maha Suci Engkau Ya Allah, aku memuji-Mu..." },
-            { judul: "15. Doa Ruku'", arab: "سُبْحَانَ رَبِّيَ الْعَظِيمِ", latin: "Subhaana rabbiyal 'azhiim.", arti: "Maha Suci Tuhanku Yang Maha Agung." },
-            { judul: "16. Doa Bangkit dari Ruku'", arab: "سَمِعَ اللَّهُ لِمَنْ حَمِدَهُ ... رَبَّنَا وَلَكَ الْحَمْدُ", latin: "Sami'allahu liman hamidah... Rabbana wa lakal hamd.", arti: "Allah mendengar orang yang memuji-Nya... Ya Tuhan kami, bagi-Mu segala puji." },
-            { judul: "17. Doa Sujud", arab: "سُبْحَانَ رَبِّيَ الْأَعْلَى", latin: "Subhaana rabbiyal a'la.", arti: "Maha Suci Tuhanku Yang Maha Tinggi." },
-            { judul: "18. Doa Duduk Antara Dua Sujud", arab: "رَبِّ اغْفِرْ لِي ، رَبِّ اغْفِرْ لِي", latin: "Rabbighfirlii, Rabbighfirlii.", arti: "Ya Tuhanku ampunilah aku." },
-            { judul: "19. Doa Sujud Tilawah", arab: "سَجَدَ وَجْهِيَ لِلَّذِي خَلَقَهُ، وَشَقَّ سَمْعَهُ وَبَصَرَهُ", latin: "Sajada wajhiya lilladzi khalaqahu, wa syaqqa sam'ahu wa basharahu.", arti: "Wajahku bersujud kepada Dzat yang menciptakannya, yang membuka pendengaran dan penglihatannya." },
-            { judul: "20. Bacaan Tasyahud", arab: "التَّحِيَّاتُ لِلَّهِ، وَالصَّلَوَاتُ، وَالطَّيِّبَاتُ", latin: "Attahiyyatu lillah wash-shalawatu wath-thayyibat...", arti: "Segala penghormatan, shalawat, dan kebaikan hanya milik Allah..." },
-            { judul: "21. Bacaan Shalawat Nabi", arab: "اللَّهُمَّ صَلِّ عَلَى مُحَمَّدٍ، وَعَلَى آلِ مُحَمَّدٍ", latin: "Allahumma shalli 'ala Muhammad wa 'ala aali Muhammad...", arti: "Ya Allah, berilah rahmat kepada Muhammad dan keluarga Muhammad..." },
-            { judul: "22. Doa Sebelum Salam", arab: "اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنْ عَذَابِ الْقَبْرِ، وَمِنْ عَذَابِ جَهَنَّمَ", latin: "Allahumma inni a'udzu bika min 'adzabil qabri, wa min 'adzabi jahannam...", arti: "Ya Allah, sesungguhnya aku berlindung kepada-Mu dari siksa kubur dan neraka Jahannam..." },
-            { judul: "23. Doa Qunut Witir", arab: "اللَّهُمَّ اهْدِنِي فِيمَنْ هَدَيْتَ ، وَعَافِنِي فِيمَنْ عَافَيْتَ", latin: "Allahummahdinii fiiman hadait, wa 'aafinii fiiman 'aafait...", arti: "Ya Allah, berilah aku petunjuk..." },
-            { judul: "24. Zikir Setelah Witir", arab: "سُبْحَانَ الْمَلِكِ الْقُدُّوسِ", latin: "Subhanal malikil quddus.", arti: "Maha Suci Allah Raja Yang Maha Suci." },
-            { judul: "25. Doa Ditimpa Kesusahan", arab: "لَا إِلَهَ إِلَّا اللَّهُ الْعَظِيمُ الْحَلِيمُ", latin: "Laa ilaha illallahul 'azhimul halim...", arti: "Tiada Tuhan selain Allah Yang Maha Agung lagi Maha Santun..." },
-            { judul: "26. Doa Menghadapi Kesulitan", arab: "اللَّهُمَّ لَا سَهْلَ إِلَّا مَا جَعَلْتَهُ سَهْلًا", latin: "Allahumma laa sahla illa maa ja'altahu sahlaa...", arti: "Ya Allah, tidak ada kemudahan kecuali yang Engkau jadikan mudah..." },
-            { judul: "27. Doa Menjenguk Orang Sakit", arab: "لَا بَأْسَ طَهُورٌ إِنْ شَاءَ اللَّهُ", latin: "Laa ba'sa thahuurun insyaa Allah.", arti: "Tidak mengapa, semoga sakitmu ini membersihkan dosamu, insya Allah." },
-            { judul: "28. Doa Tertimpa Musibah", arab: "إِنَّا لِلَّهِ وَإِنَّا إِلَيْهِ رَاجِعُونَ، اللَّهُمَّ أْجُرْنِي فِي مُصِيبَتِي", latin: "Inna lillahi wa inna ilaihi raji'un...", arti: "Sesungguhnya kami milik Allah dan kepada-Nya kami kembali..." },
-            { judul: "29. Doa Mendengar Halilintar", arab: "سُبْحَانَ الَّذِي يُسَبِّحُ الرَّعْدُ بِحَمْدِهِ", latin: "Subhanalladzi yusabbihur ra'du bihamdihi...", arti: "Maha Suci Allah yang petir bertasbih dengan memuji-Nya..." },
-            { judul: "30. Doa Melihat Hujan", arab: "اللَّهُمَّ صَيِّبًا نَافِعًا", latin: "Allahumma shayyiban nafi'an.", arti: "Ya Allah, turunkanlah hujan yang bermanfaat." },
-            { judul: "31. Zikir Setelah Hujan", arab: "مُطِرْنَا بِفَضْلِ اللَّهِ وَرَحْمَتِهِ", latin: "Muthirnaa bifadhlillahi wa rahmatih.", arti: "Kita diberi hujan karena karunia dan rahmat Allah." },
-            { judul: "32. Doa Hujan Berhenti", arab: "اللَّهُمَّ حَوَالَيْنَا وَلَا عَلَيْنَا", latin: "Allahumma hawalaina wa laa 'alaina.", arti: "Ya Allah, turunkanlah hujan di sekitar kami, bukan di atas kami." },
-            { judul: "33. Doa Melihat Bulan Sabit", arab: "اللَّهُمَّ أَهِلَّهُ عَلَيْنَا بِالْأَمْنِ وَالْإِيمَانِ", latin: "Allahumma ahillahu 'alaina bil amni wal iimaan...", arti: "Ya Allah, jadikanlah hilal ini bagi kami membawa keamanan dan keimanan..." },
-            { judul: "34. Doa Berbuka Puasa", arab: "ذَهَبَ الظَّمَأُ وَابْتَلَّتِ الْعُرُوقُ وَثَبَتَ الْأَجْرُ إِنْ شَاءَ اللَّهُ", latin: "Dzahabadh zhama-u wabtallatil 'uruuqu wa tsabatal ajru insyaa Allah.", arti: "Telah hilang dahaga, telah basah urat-urat, dan telah tetap pahala, insya Allah." },
-            { judul: "35. Berbuka di Tempat Orang", arab: "أَفْطَرَ عِنْدَكُمُ الصَّائِمُونَ", latin: "Afthara 'indakumush shaa-imuuna...", arti: "Semoga orang-orang yang berpuasa berbuka di tempat kalian..." },
-            { judul: "36. Doa Sebelum Makan", arab: "بِسْمِ اللهِ", latin: "Bismillah.", arti: "Dengan nama Allah." },
-            { judul: "37. Jika Dicela Saat Puasa", arab: "إِنِّي صَائِمٌ", latin: "Inni shaa-imun.", arti: "Sesungguhnya aku sedang berpuasa." },
-            { judul: "38. Doa Ketika Marah", arab: "أَعُوذُ بِاللَّهِ مِنَ الشَّيْطَانِ الرَّجِيمِ", latin: "A'udzu billahi minasy syaithanir rajiim.", arti: "Aku berlindung kepada Allah dari godaan setan." },
-            { judul: "39. Melihat Orang Kena Musibah", arab: "الْحَمْدُ لِلَّهِ الَّذِي عَافَانِي مِمَّا ابْتَلَاكَ بِهِ", latin: "Alhamdulillahilladzi 'aafaanii mimmab talaaka bihi...", arti: "Segala puji bagi Allah yang telah menyelamatkan aku dari musibah yang menimpamu..." },
-            { judul: "40. Doa Kebaikan Orang Lain", arab: "جَزَاكَ اللَّهُ خَيْرًا", latin: "Jazakallahu khairan.", arti: "Semoga Allah membalasmu dengan kebaikan." },
-            { judul: "41. Perlindungan Dajjal", arab: "اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنْ ... وَمِنْ شَرِّ فِتْنَةِ الْمَسِيحِ الدَّجَّالِ", latin: "Allahumma inni a'udzu bika min... fitnatil masiihid dajjal.", arti: "Ya Allah, aku berlindung dari fitnah Dajjal." },
-            { judul: "42. Doa Takut Syirik", arab: "اللَّهُمَّ إِنِّي أَعُوذُ بِكَ أَنْ أُشْرِكَ بِكَ وَأَنَا أَعْلَمُ", latin: "Allahumma inni a'udzu bika an usyrika bika wa anaa a'lam...", arti: "Ya Allah, aku berlindung kepada-Mu dari menyekutukan-Mu padahal aku mengetahui..." }
+            { judul: "2. Doa Masuk WC", arab: "(بِسْمِ اللهِ) اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنَ الْخُبُثِ وَالْخَبَائِثِ", latin: "(Bismillah) Allahumma inni a'udzu bika minal khubutsi wal khaba-its.", arti: "Ya Allah, sesungguhnya aku berlindung kepada-Mu dari godaan setan laki-laki dan perempuan." },
+            { judul: "3. Doa Keluar WC", arab: "غُفْرَانَكَ", latin: "Ghufranaka.", arti: "Aku memohon ampunan-Mu." },
+            { judul: "4. Zikir Sebelum Berwudu", arab: "بِسْمِ اللهِ", latin: "Bismillah.", arti: "Dengan nama Allah." },
+            { judul: "5. Zikir Keluar Rumah", arab: "بِسْمِ اللهِ ، تَوَكَّلْتُ عَلَى اللهِ ، وَلَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللهِ", latin: "Bismillahi, tawakkaltu 'alallahi, wa laa haula wa laa quwwata illa billah.", arti: "Dengan nama Allah, aku bertawakkal kepada Allah. Tiada daya dan kekuatan kecuali dengan pertolongan Allah." }
         ];
 
         const getGregorianDate = (startDate, dayIndex) => {
             if (!startDate) return "";
-            const date = new Date(startDate);
-            date.setDate(date.getDate() + (dayIndex - 1));
+            const date = new Date(startDate); date.setDate(date.getDate() + (dayIndex - 1));
             return date.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
         };
 
         const compressImage = (file) => {
             return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
+                const reader = new FileReader(); reader.readAsDataURL(file);
                 reader.onload = (e) => {
-                    const img = new Image();
-                    img.src = e.target.result;
+                    const img = new Image(); img.src = e.target.result;
                     img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 1200; 
+                        const canvas = document.createElement('canvas'); const MAX_WIDTH = 1200; 
                         const scaleSize = MAX_WIDTH / img.width;
-                        canvas.width = (scaleSize < 1) ? MAX_WIDTH : img.width;
-                        canvas.height = (scaleSize < 1) ? (img.height * scaleSize) : img.height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        canvas.width = (scaleSize < 1) ? MAX_WIDTH : img.width; canvas.height = (scaleSize < 1) ? (img.height * scaleSize) : img.height;
+                        const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                         resolve(canvas.toDataURL('image/jpeg', 0.85)); 
                     }
                 }
             });
         };
 
-        const blobToBase64 = (blob) => {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result);
-                reader.readAsDataURL(blob);
-            });
-        };
+        const blobToBase64 = (blob) => { return new Promise((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result); reader.readAsDataURL(blob); }); };
 
         // ==========================================
         // APP COMPONENT
@@ -230,7 +103,6 @@
             const [role, setRole] = useState('home'); 
             const [scriptUrl, setScriptUrl] = useState('');
             const [schoolName, setSchoolName] = useState('Sekolah Dasar Islam Terpadu');
-            const [teacherPin, setTeacherPin] = useState(atob('R3VydTI1MTIyNA==')); 
             const [magicLinkStatus, setMagicLinkStatus] = useState(null); 
             const [localProfile, setLocalProfile] = useState({ name: '', class: '', scriptUrl: '' });
             const [startRamadanDate, setStartRamadanDate] = useState('2026-02-18');
@@ -244,13 +116,7 @@
                 if (guruScript) {
                     const savedUrl = localStorage.getItem('ramadanScriptUrl');
                     if (savedUrl !== guruScript) {
-                        const newProfile = { 
-                            name: '', 
-                            class: '', 
-                            scriptUrl: guruScript,
-                            schoolName: sekolahParam ? decodeURIComponent(sekolahParam) : 'Sekolah Dasar Islam Terpadu',
-                            startDate: startDateParam || '2026-02-18'
-                        };
+                        const newProfile = { name: '', class: '', scriptUrl: guruScript, schoolName: sekolahParam ? decodeURIComponent(sekolahParam) : 'Sekolah Dasar Islam Terpadu', startDate: startDateParam || '2026-02-18' };
                         localStorage.setItem('ramadanProfile', JSON.stringify(newProfile));
                         setLocalProfile(newProfile);
                         if (sekolahParam) setSchoolName(decodeURIComponent(sekolahParam));
@@ -258,26 +124,14 @@
                     } else {
                         let updated = false;
                         const saved = JSON.parse(localStorage.getItem('ramadanProfile') || '{}');
-                        if (sekolahParam && decodeURIComponent(sekolahParam) !== saved.schoolName) {
-                            const decoded = decodeURIComponent(sekolahParam);
-                            setSchoolName(decoded);
-                            saved.schoolName = decoded;
-                            updated = true;
-                        }
-                        if (startDateParam && startDateParam !== saved.startDate) {
-                            setStartRamadanDate(startDateParam);
-                            saved.startDate = startDateParam;
-                            updated = true;
-                        }
+                        if (sekolahParam && decodeURIComponent(sekolahParam) !== saved.schoolName) { setSchoolName(decodeURIComponent(sekolahParam)); saved.schoolName = decodeURIComponent(sekolahParam); updated = true; }
+                        if (startDateParam && startDateParam !== saved.startDate) { setStartRamadanDate(startDateParam); saved.startDate = startDateParam; updated = true; }
                         if(updated) localStorage.setItem('ramadanProfile', JSON.stringify(saved));
                     }
                     setScriptUrl(guruScript);
                     localStorage.setItem('ramadanScriptUrl', guruScript);
-                    if (window.location.protocol !== 'file:') {
-                        window.history.replaceState({}, document.title, window.location.pathname);
-                    }
-                    setMagicLinkStatus('success');
-                    setTimeout(() => setMagicLinkStatus(null), 6000); 
+                    if (window.location.protocol !== 'file:') window.history.replaceState({}, document.title, window.location.pathname);
+                    setMagicLinkStatus('success'); setTimeout(() => setMagicLinkStatus(null), 6000); 
                 } else {
                     const globalUrl = localStorage.getItem('ramadanScriptUrl');
                     if(globalUrl) setScriptUrl(globalUrl);
@@ -289,36 +143,25 @@
                         setLocalProfile(parsed);
                     }
                 }
-                const savedPin = localStorage.getItem('teacherPin');
-                if (savedPin) setTeacherPin(savedPin);
                 const savedStartDate = localStorage.getItem('startRamadanDate');
                 if (savedStartDate) setStartRamadanDate(savedStartDate);
             }, []);
 
-            const updateGlobalSettings = (newSchoolName, newScriptUrl, newPin, newStartDate) => {
-                setSchoolName(newSchoolName);
-                setScriptUrl(newScriptUrl);
-                setTeacherPin(newPin);
-                setStartRamadanDate(newStartDate);
-                localStorage.setItem('ramadanScriptUrl', newScriptUrl);
-                localStorage.setItem('teacherPin', newPin);
-                localStorage.setItem('startRamadanDate', newStartDate);
+            const updateGlobalSettings = (newSchoolName, newScriptUrl, newStartDate) => {
+                setSchoolName(newSchoolName); setScriptUrl(newScriptUrl); setStartRamadanDate(newStartDate);
+                localStorage.setItem('ramadanScriptUrl', newScriptUrl); localStorage.setItem('startRamadanDate', newStartDate);
                 const savedProfile = localStorage.getItem('ramadanProfile') || '{}';
-                const parsed = JSON.parse(savedProfile);
-                parsed.schoolName = newSchoolName;
-                parsed.startDate = newStartDate;
+                const parsed = JSON.parse(savedProfile); parsed.schoolName = newSchoolName; parsed.startDate = newStartDate;
                 localStorage.setItem('ramadanProfile', JSON.stringify(parsed));
             };
             
             const updateStudentProfile = (field, value) => {
                 const newProfile = { ...localProfile, [field]: value, scriptUrl: scriptUrl };
-                setLocalProfile(newProfile);
-                localStorage.setItem('ramadanProfile', JSON.stringify(newProfile));
+                setLocalProfile(newProfile); localStorage.setItem('ramadanProfile', JSON.stringify(newProfile));
             };
 
             const renderContent = () => {
-                if (role === 'home') return <HomeView setRole={setRole} schoolName={schoolName} scriptUrl={scriptUrl} teacherPin={teacherPin} startRamadanDate={startRamadanDate} onSaveSettings={updateGlobalSettings} magicLinkStatus={magicLinkStatus} profile={localProfile} onProfileChange={updateStudentProfile} />;
-                if (role === 'teacher_login') return <TeacherLogin setRole={setRole} scriptUrl={scriptUrl} setScriptUrl={setScriptUrl} currentPin={teacherPin} />;
+                if (role === 'home') return <HomeView setRole={setRole} schoolName={schoolName} scriptUrl={scriptUrl} startRamadanDate={startRamadanDate} onSaveSettings={updateGlobalSettings} profile={localProfile} onProfileChange={updateStudentProfile} />;
                 if (role === 'teacher') return <TeacherDashboard setRole={setRole} scriptUrl={scriptUrl} schoolName={schoolName} startRamadanDate={startRamadanDate} />;
                 if (role === 'student') return <StudentApp setRole={setRole} globalScriptUrl={scriptUrl} schoolName={schoolName} studentName={localProfile.name} studentClass={localProfile.class} startRamadanDate={startRamadanDate} />;
                 return null;
@@ -329,11 +172,8 @@
                     <div className="w-full max-w-md bg-white shadow-2xl h-full relative font-sans flex flex-col">
                         {renderContent()}
                         {magicLinkStatus === 'success' && (
-                            <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-6 py-4 rounded-xl shadow-2xl z-[100] animate-in fade-in slide-in-from-top-4 flex flex-col items-center text-center">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <Icons.Wifi size={24} className="animate-pulse"/> 
-                                    <span className="font-bold text-lg">Terkoneksi!</span>
-                                </div>
+                            <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-6 py-4 rounded-xl shadow-2xl z-[100] animate-in fade-in flex flex-col items-center text-center">
+                                <div className="flex items-center gap-2 mb-1"><Icons.Wifi size={24} className="animate-pulse"/> <span className="font-bold text-lg">Terkoneksi!</span></div>
                                 <p className="text-xs text-green-100">Sekolah: {schoolName}</p>
                             </div>
                         )}
@@ -343,158 +183,152 @@
         }
 
         // --- HOME SCREEN ---
-        function HomeView({ setRole, schoolName, scriptUrl, teacherPin, startRamadanDate, onSaveSettings, profile, onProfileChange }) {
+        function HomeView({ setRole, schoolName, scriptUrl, startRamadanDate, onSaveSettings, profile, onProfileChange }) {
             const [viewState, setViewState] = useState('home'); 
             const [tempSchoolName, setTempSchoolName] = useState(schoolName);
             const [tempScriptUrl, setTempScriptUrl] = useState(scriptUrl);
-            const [tempPin, setTempPin] = useState(teacherPin);
             const [tempStartDate, setTempStartDate] = useState(startRamadanDate);
+            
             const [inputPin, setInputPin] = useState('');
             const [showPinChar, setShowPinChar] = useState(false);
-            const [logoError, setLogoError] = useState(false);
+            const [isCheckingPin, setIsCheckingPin] = useState(false);
+
+            const [gantiPinLama, setGantiPinLama] = useState('');
+            const [gantiPinBaru, setGantiPinBaru] = useState('');
+            const [isChangingPin, setIsChangingPin] = useState(false);
 
             useEffect(() => { setTempScriptUrl(scriptUrl); }, [scriptUrl]);
             useEffect(() => { setTempSchoolName(schoolName); }, [schoolName]);
             useEffect(() => { setTempStartDate(startRamadanDate); }, [startRamadanDate]);
 
-            const handlePinSubmit = () => {
-                if (inputPin === teacherPin) {
-                    setViewState('admin_panel');
-                    setInputPin('');
-                } else {
-                    alert("PIN Salah!");
-                    setInputPin('');
+            // VALIDASI PIN KE SERVER SECARA LANGSUNG
+            const handlePinSubmit = async () => {
+                if (!scriptUrl) {
+                    if (inputPin === '12345') { setViewState('admin_panel'); setInputPin(''); } 
+                    else { alert("Karena Link Script belum disetting, gunakan PIN Default awal: 12345"); setInputPin(''); }
+                    return;
+                }
+
+                setIsCheckingPin(true);
+                try {
+                    const res = await fetch(scriptUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ action: 'cek_pin', pin: inputPin }) });
+                    const data = await res.json();
+                    if (data.status === 'success') {
+                        setViewState('admin_panel'); setInputPin('');
+                    } else {
+                        alert(data.message); setInputPin('');
+                    }
+                } catch (e) {
+                    alert("Gagal terhubung ke Server Google. Pastikan internet aktif dan Link Script benar.");
+                } finally {
+                    setIsCheckingPin(false);
                 }
             };
 
             const handleSave = () => {
-                if (tempScriptUrl && !tempScriptUrl.includes('/exec')) {
-                     alert("Link Script Salah! Link harus berakhiran '/exec'.\nSilakan buat Deployment Baru di Google Apps Script.");
-                     return;
-                }
-                if (!tempStartDate) {
-                     alert("Pilih Tanggal 1 Ramadan terlebih dahulu!");
-                     return;
-                }
-                onSaveSettings(tempSchoolName, tempScriptUrl, tempPin, tempStartDate);
+                if (tempScriptUrl && !tempScriptUrl.includes('/exec')) return alert("Link Script Salah! Harus berakhiran '/exec'.");
+                if (!tempStartDate) return alert("Pilih Tanggal 1 Ramadan terlebih dahulu!");
+                onSaveSettings(tempSchoolName, tempScriptUrl, tempStartDate);
                 alert("Pengaturan tersimpan! Nama Sekolah, Tanggal Ramadan, & Link diperbarui.");
             };
 
-            const goToDashboard = () => {
-                if (!tempScriptUrl) {
-                    alert("Link Script belum diisi! Isi di menu pengaturan di bawah.");
-                    return;
+            const handleChangePinServer = async () => {
+                if (!scriptUrl) return alert("Anda harus menghubungkan Link Script terlebih dahulu sebelum bisa mengganti PIN Server!");
+                if (!gantiPinLama || !gantiPinBaru) return alert("Harap isi PIN Lama dan PIN Baru!");
+                
+                setIsChangingPin(true);
+                try {
+                    const res = await fetch(scriptUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ action: 'ganti_pin', oldPin: gantiPinLama, newPin: gantiPinBaru }) });
+                    const data = await res.json();
+                    if (data.status === 'success') {
+                        alert(data.message); setGantiPinLama(''); setGantiPinBaru('');
+                    } else {
+                        alert(data.message);
+                    }
+                } catch (e) {
+                    alert("Gagal terhubung ke server saat mengganti PIN.");
+                } finally {
+                    setIsChangingPin(false);
                 }
-                setRole('teacher');
-            };
-            
-            const handleStudentEnter = () => {
-                if (!profile.name || !profile.class) {
-                    alert("Mohon isi Nama dan Kelas terlebih dahulu!");
-                    return;
-                }
-                setRole('student');
             };
 
             return (
                 <div className="h-full bg-gradient-to-b from-emerald-600 to-emerald-800 flex flex-col items-center justify-center p-6 text-white relative overflow-y-auto">
                     <button onClick={() => setViewState('pin_prompt')} className="absolute top-4 right-4 bg-white/10 p-2 rounded-full hover:bg-white/20 transition backdrop-blur-sm z-10"><Icons.Settings size={20} className="text-white" /></button>
 
-                    <div className="bg-white/10 backdrop-blur-md p-6 rounded-3xl w-full border border-white/20 shadow-xl text-center">
-                        <div className="w-28 h-28 bg-white rounded-full mx-auto mb-5 flex items-center justify-center shadow-lg overflow-hidden border-4 border-emerald-200">
-                            {!logoError ? (
-                                <img src="logo.png" alt="Logo" className="w-full h-full object-contain p-1" onError={() => setLogoError(true)} />
-                            ) : (
-                                <Icons.BookOpen className="text-emerald-600" size={48} />
-                            )}
+                    <div className="bg-white/10 backdrop-blur-md p-6 rounded-3xl w-full border border-white/20 shadow-xl text-center mt-8">
+                        <div className="w-24 h-24 bg-white rounded-full mx-auto mb-4 flex items-center justify-center shadow-lg border-4 border-emerald-200">
+                            <Icons.BookOpen className="text-emerald-600" size={40} />
                         </div>
                         <h1 className="text-2xl font-bold font-serif mb-1 leading-tight">Buku Amaliah<br/>Ramadan OnLine</h1>
-                        <p className="text-emerald-100 text-sm font-bold mb-4 uppercase tracking-widest">{schoolName}</p>
+                        <p className="text-emerald-100 text-xs font-bold mb-4 uppercase tracking-widest">{schoolName}</p>
                         
-                        <div className="space-y-3 mb-6 relative">
+                        <div className="space-y-3 mb-6 relative text-sm">
                             <div className="relative">
-                                <input 
-                                    type="text" 
-                                    className="w-full p-3 rounded-xl border-none text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-emerald-300 outline-none shadow-inner bg-white/90 backdrop-blur" 
-                                    placeholder="Nama Lengkap" 
-                                    value={profile.name || ''} 
-                                    onChange={e => onProfileChange('name', e.target.value)} 
-                                />
-                                {profile.name && (
-                                    <button onClick={() => onProfileChange('name', '')} className="absolute right-3 top-3.5 text-slate-400 hover:text-red-500">
-                                        <Icons.XIcon size={16}/>
-                                    </button>
-                                )}
+                                <input type="text" className="w-full p-3 rounded-xl border-none text-slate-800 placeholder-slate-400 outline-none shadow-inner bg-white/90" placeholder="Nama Lengkap" value={profile.name || ''} onChange={e => onProfileChange('name', e.target.value)} />
+                                {profile.name && <button onClick={() => onProfileChange('name', '')} className="absolute right-3 top-3.5 text-slate-400 hover:text-red-500"><Icons.XIcon size={16}/></button>}
                             </div>
-                            <input 
-                                type="text" 
-                                className="w-full p-3 rounded-xl border-none text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-emerald-300 outline-none shadow-inner bg-white/90 backdrop-blur" 
-                                placeholder="Kelas" 
-                                value={profile.class || ''} 
-                                onChange={e => onProfileChange('class', e.target.value)} 
-                            />
+                            <input type="text" className="w-full p-3 rounded-xl border-none text-slate-800 placeholder-slate-400 outline-none shadow-inner bg-white/90" placeholder="Kelas" value={profile.class || ''} onChange={e => onProfileChange('class', e.target.value)} />
                         </div>
                         
                         <div className="mb-6 flex justify-center">
-                            {scriptUrl ? (
-                                <span className="bg-green-500/20 text-green-100 px-3 py-1 rounded-full text-xs flex items-center gap-1 border border-green-400/30"><Icons.Wifi size={12}/> Terhubung ke Kelas</span>
-                            ) : (
-                                <span className="bg-red-500/20 text-red-100 px-3 py-1 rounded-full text-xs flex items-center gap-1 border border-red-400/30 animate-pulse"><Icons.WifiOff size={12}/> Belum Terhubung</span>
-                            )}
+                            {scriptUrl ? <span className="bg-green-500/20 text-green-100 px-3 py-1 rounded-full text-xs flex items-center gap-1 border border-green-400/30"><Icons.Wifi size={12}/> Terhubung ke Kelas</span> : <span className="bg-red-500/20 text-red-100 px-3 py-1 rounded-full text-xs flex items-center gap-1 border border-red-400/30 animate-pulse"><Icons.WifiOff size={12}/> Belum Terhubung</span>}
                         </div>
                         
                         <div className="space-y-3">
-                            <button onClick={handleStudentEnter} className="w-full bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-bold py-4 rounded-xl flex items-center justify-center gap-3 transition-transform active:scale-95 shadow-lg border-b-4 border-yellow-600"><Icons.User size={24} /> Masuk sebagai Murid</button>
+                            <button onClick={() => { if(!profile.name) alert("Isi nama dulu!"); else setRole('student'); }} className="w-full bg-yellow-400 hover:bg-yellow-300 text-yellow-900 font-bold py-4 rounded-xl flex items-center justify-center gap-3 transition-transform active:scale-95 shadow-lg border-b-4 border-yellow-600"><Icons.User size={24} /> Masuk sebagai Murid</button>
                         </div>
-                        <div className="mt-8 pt-4 border-t border-white/10"><p className="text-[10px] text-emerald-200/60">Versi 11.5 (Full Audio Player & Image Zoom)</p></div>
+                        <div className="mt-6 pt-4 border-t border-white/10"><p className="text-[10px] text-emerald-200/60">Versi 12.0 (Server Secured PIN)</p></div>
                     </div>
 
-                    {/* PIN PROMPT */}
                     {viewState === 'pin_prompt' && (
                         <div className="absolute inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
                             <div className="bg-white text-slate-800 p-6 rounded-2xl w-full max-w-xs shadow-2xl text-center">
                                 <h3 className="font-bold text-lg mb-1">Area Guru</h3>
-                                <p className="text-xs text-slate-500 mb-4">Masukkan PIN Akses</p>
+                                <p className="text-xs text-slate-500 mb-4">Masukkan PIN Akses (Cek via Server)</p>
                                 <div className="relative mb-4">
                                     <input type={showPinChar ? "text" : "password"} value={inputPin} onChange={(e) => setInputPin(e.target.value)} className="w-full p-3 border rounded-xl text-center text-xl font-bold tracking-widest bg-slate-50 focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="••••" autoFocus />
                                     <button onClick={() => setShowPinChar(!showPinChar)} className="absolute right-3 top-3.5 text-slate-400">{showPinChar ? <Icons.EyeOff size={16}/> : <Icons.Eye size={16}/>}</button>
                                 </div>
                                 <div className="flex gap-2">
-                                    <button onClick={() => setViewState('home')} className="flex-1 py-2 bg-slate-200 text-slate-600 rounded-lg font-bold">Batal</button>
-                                    <button onClick={handlePinSubmit} className="flex-1 py-2 bg-emerald-600 text-white rounded-lg font-bold">Masuk</button>
+                                    <button onClick={() => setViewState('home')} className="flex-1 py-2 bg-slate-200 text-slate-600 rounded-lg font-bold" disabled={isCheckingPin}>Batal</button>
+                                    <button onClick={handlePinSubmit} className="flex-1 py-2 bg-emerald-600 text-white rounded-lg font-bold flex justify-center items-center" disabled={isCheckingPin}>{isCheckingPin ? <Icons.Loader2 className="animate-spin"/> : 'Masuk'}</button>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* ADMIN PANEL */}
                     {viewState === 'admin_panel' && (
                         <div className="absolute inset-0 bg-slate-900 z-50 overflow-y-auto">
-                            <div className="min-h-full flex flex-col items-center justify-center p-4">
+                            <div className="min-h-full flex flex-col items-center justify-center p-4 pb-10">
                                 <div className="bg-white text-slate-800 p-6 rounded-2xl w-full max-w-sm shadow-2xl relative">
                                     <button onClick={() => setViewState('home')} className="absolute top-4 right-4 bg-slate-100 p-2 rounded-full hover:bg-slate-200"><Icons.XIcon size={20}/></button>
                                     <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2"><Icons.Shield className="text-emerald-600"/> Panel Guru</h2>
 
-                                    <button onClick={goToDashboard} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white p-4 rounded-xl flex items-center justify-between mb-6 shadow-lg group transition-all">
+                                    <button onClick={() => { if(!scriptUrl) return alert("Isi Link Script dulu!"); setRole('teacher'); }} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white p-4 rounded-xl flex items-center justify-between mb-6 shadow-lg group transition-all">
                                         <div className="text-left"><span className="block font-bold text-lg">Buka Dashboard</span><span className="text-emerald-100 text-xs">Periksa & Nilai Setoran Siswa</span></div>
                                         <Icons.ArrowRight className="group-hover:translate-x-1 transition-transform"/>
                                     </button>
 
-                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
-                                        <h3 className="font-bold text-sm text-slate-700 flex items-center gap-2"><Icons.Settings size={16}/> Pengaturan Aplikasi</h3>
-                                        <div><label className="text-[10px] font-bold text-slate-500 block mb-1">Nama Sekolah</label><input type="text" value={tempSchoolName} onChange={e => setTempSchoolName(e.target.value)} className="w-full p-2 border rounded-lg text-sm bg-white" /></div>
-                                        <div><label className="text-[10px] font-bold text-slate-500 block mb-1">Link Script Google Apps</label><input type="text" value={tempScriptUrl} onChange={e => setTempScriptUrl(e.target.value)} className="w-full p-2 border rounded-lg text-xs font-mono bg-white text-slate-600" placeholder="https://script.google.com..." /></div>
-                                        
-                                        <div className="pt-2 border-t border-slate-200">
-                                            <label className="text-[10px] font-bold text-indigo-600 block mb-1 flex items-center gap-1"><Icons.Moon size={12}/> Tanggal 1 Ramadan (Isbat)</label>
-                                            <input type="date" value={tempStartDate} onChange={e => setTempStartDate(e.target.value)} className="w-full p-2 border border-indigo-200 rounded-lg text-sm bg-indigo-50 text-indigo-800 outline-none focus:ring-1 focus:ring-indigo-400" />
-                                            <p className="text-[9px] text-slate-400 mt-1">Ini akan mengubah tampilan tanggal di aplikasi semua murid.</p>
-                                        </div>
-
-                                        <div className="pt-2 border-t border-slate-200"><label className="text-[10px] font-bold text-red-500 block mb-1">Ganti PIN Guru (Hati-hati)</label><input type="text" value={tempPin} onChange={e => setTempPin(e.target.value)} className="w-full p-2 border border-red-200 rounded-lg text-sm bg-red-50 text-center font-bold tracking-widest text-red-800" /></div>
-                                        <button onClick={handleSave} className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold text-xs hover:bg-blue-700 flex justify-center items-center gap-2"><Icons.Save size={14}/> Simpan Pengaturan</button>
+                                    {/* PENGATURAN UMUM LOKAL */}
+                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4 mb-4">
+                                        <h3 className="font-bold text-sm text-slate-700 flex items-center gap-2"><Icons.Settings size={16}/> Pengaturan Koneksi</h3>
+                                        <div><label className="text-[10px] font-bold text-slate-500 block mb-1">Nama Sekolah</label><input type="text" value={tempSchoolName} onChange={e => setTempSchoolName(e.target.value)} className="w-full p-2 border rounded-lg text-sm bg-white outline-none" /></div>
+                                        <div><label className="text-[10px] font-bold text-slate-500 block mb-1">Link Script Google Apps</label><input type="text" value={tempScriptUrl} onChange={e => setTempScriptUrl(e.target.value)} className="w-full p-2 border rounded-lg text-xs font-mono bg-white text-slate-600 outline-none" placeholder="https://script.google.com..." /></div>
+                                        <div><label className="text-[10px] font-bold text-indigo-600 block mb-1 flex items-center gap-1"><Icons.Moon size={12}/> Tanggal 1 Ramadan (Isbat)</label><input type="date" value={tempStartDate} onChange={e => setTempStartDate(e.target.value)} className="w-full p-2 border border-indigo-200 rounded-lg text-sm bg-indigo-50 text-indigo-800 outline-none" /></div>
+                                        <button onClick={handleSave} className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold text-xs hover:bg-blue-700 flex justify-center items-center gap-2"><Icons.Save size={14}/> Simpan Pengaturan Koneksi</button>
                                     </div>
-                                    <div className="mt-4 text-center"><button onClick={() => setViewState('home')} className="text-xs text-slate-400 hover:text-slate-600 underline">Keluar Panel</button></div>
+
+                                    {/* FITUR GANTI PIN KE SERVER */}
+                                    <div className="bg-red-50 p-4 rounded-xl border border-red-200 space-y-3">
+                                        <h3 className="font-bold text-sm text-red-700 flex items-center gap-2"><Icons.Lock size={16}/> Ganti PIN Master (Server)</h3>
+                                        <p className="text-[10px] text-red-600 leading-tight">PIN akan diubah langsung di Spreadsheet dan berlaku untuk semua guru.</p>
+                                        <div className="flex gap-2">
+                                            <input type="password" value={gantiPinLama} onChange={e => setGantiPinLama(e.target.value)} placeholder="PIN Lama" className="w-1/2 p-2 border border-red-200 rounded-lg text-sm text-center outline-none" />
+                                            <input type="password" value={gantiPinBaru} onChange={e => setGantiPinBaru(e.target.value)} placeholder="PIN Baru" className="w-1/2 p-2 border border-red-200 rounded-lg text-sm text-center font-bold text-red-700 outline-none" />
+                                        </div>
+                                        <button onClick={handleChangePinServer} disabled={isChangingPin} className="w-full bg-red-600 text-white py-2 rounded-lg font-bold text-xs hover:bg-red-700 flex justify-center items-center gap-2">{isChangingPin ? <Icons.Loader2 className="animate-spin"/> : 'Ubah PIN Sekarang'}</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -511,57 +345,31 @@
             const [nilaiInput, setNilaiInput] = useState('');
             const [koreksiInput, setKoreksiInput] = useState('');
             const [saving, setSaving] = useState(false);
-            const [errorMsg, setErrorMsg] = useState('');
             const [activeTab, setActiveTab] = useState('jurnal');
-            // STATE UNTUK ZOOM GAMBAR
             const [zoomedImage, setZoomedImage] = useState(null);
 
             useEffect(() => { fetchData(); }, []);
 
             const fetchData = async () => {
                 setLoading(true);
-                setErrorMsg('');
                 try {
                     const response = await fetch(scriptUrl);
-                    if (!response.ok) throw new Error("Gagal mengambil data");
+                    if (!response.ok) throw new Error("Gagal");
                     const json = await response.json();
-                    if (json.length === 0) {
-                         setData([]);
-                    } else {
-                         setData(json);
-                    }
-                } catch (e) {
-                    setErrorMsg("Gagal koneksi. Pastikan Link Script benar.");
-                } finally {
-                    setLoading(false);
-                }
+                    setData(json.length === 0 ? [] : json);
+                } catch (e) { alert("Gagal koneksi server."); } finally { setLoading(false); }
             };
 
             const handleSimpanNilai = async () => {
                 if (!selectedStudent) return;
                 setSaving(true);
-                const payload = JSON.stringify({ 
-                    action: 'nilai', 
-                    rowIndex: selectedStudent.rowIndex, 
-                    nama: selectedStudent.nama, 
-                    hari: selectedStudent.hari, 
-                    nilaiGuru: nilaiInput, 
-                    koreksiGuru: koreksiInput 
-                });
-                try { await fetch(scriptUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: payload }); alert("Nilai tersimpan!"); setSelectedStudent(null); fetchData(); } catch (e) { alert("Gagal menyimpan."); } finally { setSaving(false); }
+                try { await fetch(scriptUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ action: 'nilai', rowIndex: selectedStudent.rowIndex, nama: selectedStudent.nama, hari: selectedStudent.hari, nilaiGuru: nilaiInput, koreksiGuru: koreksiInput }) }); alert("Nilai tersimpan!"); setSelectedStudent(null); fetchData(); } catch (e) { alert("Gagal menyimpan."); } finally { setSaving(false); }
             };
 
-            const openModal = (student) => { setSelectedStudent(student); setNilaiInput(student.nilaiGuru || ''); setKoreksiInput(student.koreksiGuru || ''); };
-
             const copyStudentLink = () => {
-                if (!scriptUrl) { alert("Link Script kosong!"); return; }
-                const isLocal = window.location.protocol === 'file:';
-                if (isLocal) { prompt("Anda offline. Salin Link Script ini manual:", scriptUrl); return; }
-                
                 const baseUrl = window.location.href.split('?')[0];
                 const magicLink = `${baseUrl}?guru=${encodeURIComponent(scriptUrl)}&school=${encodeURIComponent(schoolName)}&start=${startRamadanDate}`;
-                
-                if (navigator.clipboard) { navigator.clipboard.writeText(magicLink).then(() => alert("✨ Link Ajaib Tersalin!\n\nLink ini sudah berisi: \n1. Koneksi Database\n2. Nama Sekolah\n3. Setingan Tgl 1 Ramadan\n\nMurid tinggal klik dan pakai!")).catch(() => prompt("Salin manual:", magicLink)); } else { prompt("Salin link:", magicLink); }
+                if (navigator.clipboard) { navigator.clipboard.writeText(magicLink).then(() => alert("✨ Link Ajaib Tersalin!")).catch(() => prompt("Salin manual:", magicLink)); } else { prompt("Salin link:", magicLink); }
             };
 
             const getFilteredData = () => {
@@ -569,20 +377,12 @@
                     const text = item.rincian || item.kebaikan || "";
                     const hasAudioLink = item.audio && item.audio.includes('drive.google.com');
                     const hasFotoLink = item.foto && item.foto.includes('drive.google.com');
-                    
                     const isHafalan = text.includes('🎤') || hasAudioLink;
                     const isGaleri = text.includes('📸') || hasFotoLink;
-
                     if (activeTab === 'hafalan') return isHafalan;
                     if (activeTab === 'galeri') return isGaleri;
                     return !isHafalan && !isGaleri;
                 });
-            };
-            
-            const handleLogout = () => {
-                if(window.confirm("Yakin ingin keluar dari Dashboard Guru?")) {
-                    setRole('home');
-                }
             };
 
             return (
@@ -592,123 +392,57 @@
                             <h1 className="font-bold text-lg text-slate-700 flex items-center gap-2"><Icons.Award className="text-emerald-600"/> Dashboard Guru</h1>
                             <div className="flex gap-2">
                                 <button onClick={fetchData} className="p-2 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100 hover:bg-emerald-100 transition"><Icons.Loader2 size={18} className={loading ? "animate-spin" : ""} /></button>
-                                <button onClick={handleLogout} className="p-2 bg-red-50 text-red-600 rounded-full border border-red-100 hover:bg-red-100 transition"><Icons.LogOut size={18} /></button>
+                                <button onClick={() => { if(window.confirm("Keluar Dashboard?")) setRole('home'); }} className="p-2 bg-red-50 text-red-600 rounded-full border border-red-100 hover:bg-red-100 transition"><Icons.LogOut size={18} /></button>
                             </div>
                         </div>
                         <div className="flex bg-slate-100 p-1 rounded-xl">
-                            {['jurnal', 'hafalan', 'galeri'].map(tab => (
-                                <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 py-2 text-xs font-bold rounded-lg capitalize flex items-center justify-center gap-1 transition-all ${activeTab === tab ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
-                                    {tab === 'jurnal' ? <Icons.List size={14}/> : tab === 'hafalan' ? <Icons.Mic size={14}/> : <Icons.Image size={14}/>} {tab}
-                                </button>
-                            ))}
+                            {['jurnal', 'hafalan', 'galeri'].map(tab => (<button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 py-2 text-xs font-bold rounded-lg capitalize flex items-center justify-center gap-1 transition-all ${activeTab === tab ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>{tab === 'jurnal' ? <Icons.List size={14}/> : tab === 'hafalan' ? <Icons.Mic size={14}/> : <Icons.Image size={14}/>} {tab}</button>))}
                         </div>
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-4 pb-20 relative">
                         <div className="bg-blue-50 border border-blue-200 p-3 rounded-xl flex flex-col gap-3 shadow-sm mb-4">
-                            <div className="flex items-start gap-2"><div className="bg-blue-100 p-2 rounded-full text-blue-600"><Icons.Link size={16}/></div><div><span className="font-bold text-sm text-blue-800 block">Link Ajaib (Full Auto)</span><span className="text-xs text-blue-600 leading-tight block">Kirim ini ke murid. Nama sekolah otomatis tersetting.</span></div></div>
-                            <button onClick={copyStudentLink} className="w-full bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 active:scale-95 shadow hover:bg-blue-700 transition"><Icons.Copy size={14}/> Salin Link Ajaib</button>
+                            <div className="flex items-start gap-2"><div className="bg-blue-100 p-2 rounded-full text-blue-600"><Icons.Link size={16}/></div><div><span className="font-bold text-sm text-blue-800 block">Link Ajaib</span><span className="text-[10px] text-blue-600 leading-tight block">Kirim ke murid agar otomatis tersetting.</span></div></div>
+                            <button onClick={copyStudentLink} className="w-full bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex justify-center items-center gap-2 active:scale-95 shadow hover:bg-blue-700 transition"><Icons.Copy size={14}/> Salin Link</button>
                         </div>
 
                         <div className="space-y-3">
                             {loading ? <div className="text-center py-10 text-slate-400">Memuat data...</div> : 
-                            getFilteredData().length === 0 ? <div className="text-center py-10 text-slate-400 bg-white rounded-xl border border-dashed border-slate-300">Belum ada setoran di kategori ini.</div> :
+                            getFilteredData().length === 0 ? <div className="text-center py-10 text-slate-400 bg-white rounded-xl border border-dashed border-slate-300">Kosong.</div> :
                             getFilteredData().map((item, idx) => (
                             <div key={idx} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                                <div className="flex justify-between items-start mb-2"><div><h3 className="font-bold text-slate-800 flex items-center gap-2">{item.nama} <span className="text-[10px] bg-slate-100 px-1 rounded text-slate-500">#{item.rowIndex}</span></h3><p className="text-xs text-slate-500">Hari ke-{item.hari} • {item.kelas}</p></div>{activeTab === 'jurnal' && <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-1 rounded-full border border-yellow-200">{item.poin} Poin (Auto)</span>}</div>
+                                <div className="flex justify-between items-start mb-2"><div><h3 className="font-bold text-slate-800 flex items-center gap-2">{item.nama} <span className="text-[10px] bg-slate-100 px-1 rounded text-slate-500">#{item.rowIndex}</span></h3><p className="text-[10px] text-slate-500">Hr-{item.hari} • {item.kelas}</p></div>{activeTab === 'jurnal' && <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-1 rounded-full border border-yellow-200">{item.poin} Poin</span>}</div>
                                 {activeTab === 'jurnal' && <div className="bg-slate-50 p-2 rounded-lg text-xs text-slate-600 mb-3 font-mono border border-slate-100">{item.rincian || item.kebaikan}</div>}
                                 
-                                {/* TAMPILAN AUDIO MENGGUNAKAN IFRAME GOOGLE DRIVE */}
                                 {activeTab === 'hafalan' && (
-                                    <div className="mb-3 bg-blue-50 border border-blue-200 p-4 rounded-xl text-center">
-                                        <Icons.Mic size={24} className="text-blue-500 mx-auto mb-3"/>
-                                        <div className="text-sm font-bold text-blue-800 mb-3">Rekaman Audio</div>
-                                        {item.audio && item.audio.includes('drive.google.com') ? (
-                                            <div className="w-full rounded-lg overflow-hidden border border-blue-200 shadow-sm bg-white" style={{ height: '70px' }}>
-                                                 <iframe 
-                                                     src={getIframeUrl(item.audio)} 
-                                                     width="100%" 
-                                                     height="100%" 
-                                                     allow="autoplay" 
-                                                     style={{ border: 'none' }} 
-                                                     title="Audio Player">
-                                                 </iframe>
-                                            </div>
-                                        ) : (
-                                            <span className="text-xs text-slate-400 italic bg-white px-3 py-1 rounded-full border border-slate-200">File rekaman tidak tersedia.</span>
-                                        )}
+                                    <div className="mb-3 bg-blue-50 border border-blue-200 p-4 rounded-xl text-center"><Icons.Mic size={24} className="text-blue-500 mx-auto mb-3"/><div className="text-sm font-bold text-blue-800 mb-3">Audio</div>
+                                        {item.audio && item.audio.includes('drive.google.com') ? (<div className="w-full rounded-lg overflow-hidden border border-blue-200 shadow-sm bg-white" style={{ height: '70px' }}><iframe src={getIframeUrl(item.audio)} width="100%" height="100%" allow="autoplay" style={{ border: 'none' }} title="Audio Player"></iframe></div>) : (<span className="text-[10px] text-slate-400 italic bg-white px-3 py-1 rounded-full border border-slate-200">Tidak tersedia.</span>)}
                                         <div className="mt-4 text-[10px] text-slate-500 italic border-t border-blue-100 pt-3">{item.rincian || item.kebaikan}</div>
                                     </div>
                                 )}
 
-                                {/* TAMPILAN FOTO MENGGUNAKAN IMAGE PREVIEW DENGAN FITUR KLIK ZOOM */}
                                 {activeTab === 'galeri' && (
-                                    <div className="mb-3 bg-slate-50 border border-slate-200 p-4 rounded-xl text-center">
-                                        <div className="text-sm font-bold text-slate-800 mb-3">Bukti Gambar</div>
+                                    <div className="mb-3 bg-slate-50 border border-slate-200 p-4 rounded-xl text-center"><div className="text-sm font-bold text-slate-800 mb-3">Foto</div>
                                         {item.foto && item.foto.includes('drive.google.com') ? (
-                                            <div className="relative inline-block">
-                                                <img 
-                                                    src={getValidMediaUrl(item.foto)} 
-                                                    alt="Bukti Kegiatan" 
-                                                    onClick={() => setZoomedImage(getValidMediaUrl(item.foto))}
-                                                    className="w-full max-h-60 object-contain rounded-lg border border-slate-200 shadow-sm mx-auto cursor-zoom-in" 
-                                                />
-                                                <div className="absolute bottom-2 right-2 bg-black/60 text-white p-1.5 rounded-lg pointer-events-none">
-                                                    <Icons.ZoomIn size={16} />
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <span className="text-xs text-slate-400 italic bg-white px-3 py-1 rounded-full border border-slate-200">File gambar tidak tersedia.</span>
-                                        )}
+                                            <div className="relative inline-block"><img src={getValidMediaUrl(item.foto)} alt="Bukti" onClick={() => setZoomedImage(getValidMediaUrl(item.foto))} className="w-full max-h-60 object-contain rounded-lg border border-slate-200 shadow-sm mx-auto cursor-zoom-in" /><div className="absolute bottom-2 right-2 bg-black/60 text-white p-1.5 rounded-lg pointer-events-none"><Icons.ZoomIn size={16} /></div></div>
+                                        ) : (<span className="text-[10px] text-slate-400 italic bg-white px-3 py-1 rounded-full border border-slate-200">Tidak tersedia.</span>)}
                                         <div className="mt-4 text-[10px] text-slate-500 italic border-t border-slate-200 pt-3">{item.rincian || item.kebaikan}</div>
                                     </div>
                                 )}
                                 
                                 <div className="border-t pt-2 mt-2 flex justify-between items-center">
-                                    <div className="text-xs">
-                                        {item.nilaiGuru ? <div className="text-green-600 font-bold bg-green-50 px-2 py-1 rounded border border-green-100">Nilai Guru: {item.nilaiGuru}</div> : (activeTab === 'jurnal' ? '' : <span className="text-red-400 italic">Belum dinilai</span>)}
-                                        {item.koreksiGuru && <span className="text-slate-400 ml-2 italic text-[10px]">"{item.koreksiGuru}"</span>}
-                                    </div>
-                                    {activeTab !== 'jurnal' ? 
-                                        <button onClick={() => openModal(item)} className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 active:scale-95 transition shadow hover:bg-emerald-700"><Icons.PenTool size={12}/> Nilai</button>
-                                        :
-                                        <span className="text-[10px] text-slate-400 flex items-center gap-1"><Icons.CheckCircle size={10}/> Laporan Jurnal</span>
-                                    }
+                                    <div className="text-xs">{item.nilaiGuru ? <div className="text-green-600 font-bold bg-green-50 px-2 py-1 rounded border border-green-100">Nilai: {item.nilaiGuru}</div> : (activeTab === 'jurnal' ? '' : <span className="text-red-400 italic">Belum dinilai</span>)}{item.koreksiGuru && <span className="text-slate-400 ml-2 italic text-[10px]">"{item.koreksiGuru}"</span>}</div>
+                                    {activeTab !== 'jurnal' ? <button onClick={() => {setSelectedStudent(item); setNilaiInput(item.nilaiGuru||''); setKoreksiInput(item.koreksiGuru||'');}} className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 active:scale-95 shadow hover:bg-emerald-700"><Icons.PenTool size={12}/> Nilai</button> : <span className="text-[10px] text-slate-400 flex items-center gap-1"><Icons.CheckCircle size={10}/> Terkirim</span>}
                                 </div>
                             </div>
                             ))}
                         </div>
                     </div>
 
-                    {/* MODAL BERI NILAI */}
-                    {selectedStudent && (<div className="fixed inset-0 bg-black/60 z-[90] flex items-center justify-center p-4"><div className="bg-white w-[90%] max-w-sm rounded-2xl p-6 shadow-2xl relative"><button onClick={() => setSelectedStudent(null)} className="absolute top-4 right-4 bg-slate-100 p-1 rounded-full"><Icons.XIcon size={20} className="text-slate-500"/></button><h3 className="font-bold text-lg mb-1 text-slate-800">Beri Nilai</h3><p className="text-xs text-slate-500 mb-4">{selectedStudent.nama} • {selectedStudent.rowIndex}</p><div className="space-y-4 mb-6"><div><label className="text-xs font-bold text-slate-500 block mb-1">Nilai Guru</label><input type="text" value={nilaiInput} onChange={(e) => setNilaiInput(e.target.value)} className="w-full p-3 bg-slate-50 border rounded-xl" placeholder="Contoh: 100" /></div><div><label className="text-xs font-bold text-slate-500 block mb-1">Koreksi</label><textarea rows="3" value={koreksiInput} onChange={(e) => setKoreksiInput(e.target.value)} className="w-full p-3 bg-slate-50 border rounded-xl text-sm" /></div></div><button onClick={handleSimpanNilai} disabled={saving} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold flex justify-center items-center gap-2">{saving ? <Icons.Loader2 className="animate-spin"/> : <Icons.CheckSquare size={18}/>} Simpan</button></div></div>)}
-
-                    {/* MODAL ZOOM GAMBAR (FULL SCREEN) */}
-                    {zoomedImage && (
-                        <div className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-2 backdrop-blur-md">
-                            <button onClick={() => setZoomedImage(null)} className="absolute top-6 right-6 bg-red-600 text-white p-3 rounded-full shadow-2xl hover:bg-red-700 active:scale-95 transition z-[110]">
-                                <Icons.XIcon size={28}/>
-                            </button>
-                            <div className="w-full h-full overflow-auto flex items-center justify-center">
-                                <img src={zoomedImage} alt="Zoomed" className="max-w-full max-h-full object-contain" />
-                            </div>
-                        </div>
-                    )}
+                    {selectedStudent && (<div className="fixed inset-0 bg-black/60 z-[90] flex items-center justify-center p-4"><div className="bg-white w-[90%] max-w-sm rounded-2xl p-6 shadow-2xl relative"><button onClick={() => setSelectedStudent(null)} className="absolute top-4 right-4 bg-slate-100 p-1 rounded-full"><Icons.XIcon size={20} className="text-slate-500"/></button><h3 className="font-bold text-lg mb-1 text-slate-800">Beri Nilai</h3><p className="text-xs text-slate-500 mb-4">{selectedStudent.nama}</p><div className="space-y-4 mb-6"><div><label className="text-xs font-bold text-slate-500 block mb-1">Nilai</label><input type="number" value={nilaiInput} onChange={(e) => setNilaiInput(e.target.value)} className="w-full p-3 bg-slate-50 border rounded-xl" placeholder="100" /></div><div><label className="text-xs font-bold text-slate-500 block mb-1">Koreksi</label><textarea rows="3" value={koreksiInput} onChange={(e) => setKoreksiInput(e.target.value)} className="w-full p-3 bg-slate-50 border rounded-xl text-sm" /></div></div><button onClick={handleSimpanNilai} disabled={saving} className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold flex justify-center items-center gap-2">{saving ? <Icons.Loader2 className="animate-spin"/> : <Icons.CheckSquare size={18}/>} Simpan</button></div></div>)}
+                    {zoomedImage && (<div className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-2 backdrop-blur-md"><button onClick={() => setZoomedImage(null)} className="absolute top-6 right-6 bg-red-600 text-white p-3 rounded-full shadow-2xl hover:bg-red-700 active:scale-95 transition z-[110]"><Icons.XIcon size={28}/></button><div className="w-full h-full overflow-auto flex items-center justify-center"><img src={zoomedImage} alt="Zoomed" className="max-w-full max-h-full object-contain" /></div></div>)}
                 </div>
             );
-        }
-
-        // --- TEACHER LOGIN ---
-        function TeacherLogin({ setRole, scriptUrl, setScriptUrl, currentPin }) {
-            const [pinInput, setPinInput] = useState('');
-            const handleLogin = () => { 
-                if (pinInput === currentPin) { 
-                    if (!scriptUrl) return alert("Link Script kosong!"); 
-                    if (!scriptUrl.includes('/exec')) return alert("Link Script salah! Harus berakhiran '/exec'.\nCek Deploy > New Deployment.");
-                    setRole('teacher'); 
-                } else { alert('PIN Salah!'); } 
-            };
-            return (<div className="h-screen bg-slate-100 flex items-center justify-center p-6"><div className="bg-white p-6 rounded-3xl shadow-xl w-full text-center"><h2 className="text-xl font-bold text-slate-800 mb-6">Login Guru</h2><input type="password" value={pinInput} onChange={(e) => setPinInput(e.target.value)} className="w-full p-3 bg-slate-50 border rounded-xl text-center mb-6" placeholder="••••" /><div className="flex gap-2"><button onClick={() => setRole('home')} className="flex-1 py-3 bg-slate-200 rounded-xl">Batal</button><button onClick={handleLogin} className="flex-1 py-3 bg-emerald-600 text-white rounded-xl">Masuk</button></div></div></div>);
         }
 
         // --- STUDENT APP ---
@@ -728,137 +462,56 @@
             const mediaRecorderRef = useRef(null);
             const [raportData, setRaportData] = useState([]);
             const [loadingRaport, setLoadingRaport] = useState(false);
-            
-            // STATE UNTUK ZOOM GAMBAR DI RAPOR
             const [zoomedImage, setZoomedImage] = useState(null);
             const [localLocks, setLocalLocks] = useState({});
 
             const currentDateGregorian = getGregorianDate(startRamadanDate || '2026-02-18', activeDay);
             const triggerConfetti = () => { setShowConfetti(true); setTimeout(() => setShowConfetti(false), 3000); };
             
-            const getStorageKey = (type) => {
-                const id = generateStorageID(studentProfile.scriptUrl);
-                const nameKey = studentName ? studentName.trim().toLowerCase().replace(/\s+/g, '_') : 'guest';
-                return `ramadan_${type}_${id}_${nameKey}`; 
-            };
+            const getStorageKey = (type) => { const id = generateStorageID(studentProfile.scriptUrl); const nameKey = studentName ? studentName.trim().toLowerCase().replace(/\s+/g, '_') : 'guest'; return `ramadan_${type}_${id}_${nameKey}`; };
             
             useEffect(() => {
                 if (studentProfile.scriptUrl && studentProfile.name) {
-                    const dataKey = getStorageKey('userData');
-                    const savedData = localStorage.getItem(dataKey);
-                    if (savedData) {
-                        setUserData(JSON.parse(savedData));
-                    } else {
-                        const init = {}; 
-                        for(let i=1; i<=30; i++) { init[i] = { puasa: false, tarawih: false, validated: false }; }
-                        setUserData(init);
-                    }
+                    const dataKey = getStorageKey('userData'); const savedData = localStorage.getItem(dataKey);
+                    if (savedData) { setUserData(JSON.parse(savedData)); } 
+                    else { const init = {}; for(let i=1; i<=30; i++) { init[i] = { puasa: false, tarawih: false, validated: false }; } setUserData(init); }
                 }
             }, [studentProfile.scriptUrl, studentProfile.name]);
 
-            useEffect(() => {
-                if (studentProfile.scriptUrl && studentProfile.name && Object.keys(userData).length > 0) {
-                    const dataKey = getStorageKey('userData');
-                    localStorage.setItem(dataKey, JSON.stringify(userData));
-                }
-            }, [userData, studentProfile.scriptUrl, studentProfile.name]);
+            useEffect(() => { if (studentProfile.scriptUrl && studentProfile.name && Object.keys(userData).length > 0) localStorage.setItem(getStorageKey('userData'), JSON.stringify(userData)); }, [userData, studentProfile.scriptUrl, studentProfile.name]);
 
-            const isDayJournalSubmitted = (day) => {
-                if (localLocks[`${day}_journal`]) return true;
-                if (!raportData || raportData.length === 0) return false; 
-                return raportData.some(d => parseInt(d.hari) === day && !(d.rincian || d.kebaikan || "").includes('🎤') && !(d.rincian || d.kebaikan || "").includes('📸'));
-            };
+            const isDayJournalSubmitted = (day) => { if (localLocks[`${day}_journal`]) return true; if (!raportData || raportData.length === 0) return false; return raportData.some(d => parseInt(d.hari) === day && !(d.rincian || d.kebaikan || "").includes('🎤') && !(d.rincian || d.kebaikan || "").includes('📸')); };
+            const isDayAudioSubmitted = (day) => { if (localLocks[`${day}_audio`]) return true; if (!raportData || raportData.length === 0) return false; return raportData.some(d => parseInt(d.hari) === day && (d.rincian || d.kebaikan || "").includes('🎤')); };
+            const isDayPhotoSubmitted = (day) => { if (localLocks[`${day}_photo`]) return true; if (!raportData || raportData.length === 0) return false; return raportData.some(d => parseInt(d.hari) === day && (d.rincian || d.kebaikan || "").includes('📸')); };
 
-            const isDayAudioSubmitted = (day) => {
-                if (localLocks[`${day}_audio`]) return true;
-                if (!raportData || raportData.length === 0) return false;
-                return raportData.some(d => parseInt(d.hari) === day && (d.rincian || d.kebaikan || "").includes('🎤'));
-            };
-
-            const isDayPhotoSubmitted = (day) => {
-                if (localLocks[`${day}_photo`]) return true;
-                if (!raportData || raportData.length === 0) return false;
-                return raportData.some(d => parseInt(d.hari) === day && (d.rincian || d.kebaikan || "").includes('📸'));
-            };
-
-            const isJournalSubmitted = isDayJournalSubmitted(activeDay);
-            const isAudioSubmitted = isDayAudioSubmitted(activeDay);
-            const isPhotoSubmitted = isDayPhotoSubmitted(activeDay);
+            const isJournalSubmitted = isDayJournalSubmitted(activeDay); const isAudioSubmitted = isDayAudioSubmitted(activeDay); const isPhotoSubmitted = isDayPhotoSubmitted(activeDay);
 
             const updateField = (day, field, value) => { 
                 if (isDayJournalSubmitted(day)) return; 
                 setUserData(prev => {
-                    const dayData = prev[day] || {};
-                    let updates = { [field]: value };
-                    
-                    if (field.startsWith('amalanLain') && !field.includes('Check')) {
-                        const num = field.replace('amalanLain', '');
-                        if (value.trim().length > 0) {
-                            updates[`amalanLainCheck${num}`] = true;
-                        } else {
-                            updates[`amalanLainCheck${num}`] = false;
-                        }
-                    }
-                    
+                    const dayData = prev[day] || {}; let updates = { [field]: value };
+                    if (field.startsWith('amalanLain') && !field.includes('Check')) { const num = field.replace('amalanLain', ''); updates[`amalanLainCheck${num}`] = value.trim().length > 0; }
                     return { ...prev, [day]: { ...dayData, ...updates } };
                 });
             };
             
-            const toggleCheck = (day, field) => { 
-                if (userData[day]?.validated || isDayJournalSubmitted(day)) return; 
-                setUserData(prev => {
-                    const dayData = prev[day] || {};
-                    return { ...prev, [day]: { ...dayData, [field]: !dayData[field] } };
-                });
-            };
-            const togglePuasa = (type) => {
-                if (userData[activeDay]?.validated || isDayJournalSubmitted(activeDay)) return;
-                setUserData(prev => {
-                    const dayData = prev[activeDay] || {};
-                    return { ...prev, [activeDay]: { ...dayData, puasaPenuh: type === 'penuh' ? !dayData.puasaPenuh : false, puasaSetengah: type === 'setengah' ? !dayData.puasaSetengah : false } };
-                });
-            };
+            const toggleCheck = (day, field) => { if (userData[day]?.validated || isDayJournalSubmitted(day)) return; setUserData(prev => { const dayData = prev[day] || {}; return { ...prev, [day]: { ...dayData, [field]: !dayData[field] } }; }); };
+            const togglePuasa = (type) => { if (userData[activeDay]?.validated || isDayJournalSubmitted(activeDay)) return; setUserData(prev => { const dayData = prev[activeDay] || {}; return { ...prev, [activeDay]: { ...dayData, puasaPenuh: type === 'penuh' ? !dayData.puasaPenuh : false, puasaSetengah: type === 'setengah' ? !dayData.puasaSetengah : false } }; }); };
 
-            const handleImageUpload = async (e) => { 
-                const file = e.target.files[0]; 
-                if(file) { 
-                    setSelectedImage(file.name); 
-                    try { 
-                        const b64 = await compressImage(file); 
-                        setBase64Image(b64); 
-                    } catch(e){ 
-                        alert("Gagal memproses gambar."); 
-                    } 
-                } 
-            };
+            const handleImageUpload = async (e) => { const file = e.target.files[0]; if(file) { setSelectedImage(file.name); try { const b64 = await compressImage(file); setBase64Image(b64); } catch(e){ alert("Gagal memproses gambar."); } } };
             const removeImage = () => { setSelectedImage(null); setBase64Image(""); };
             
-            // --- FUNGSI REKAMAN TANPA BATAS WAKTU ---
             const startRecording = async () => { 
                 try { 
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); 
                     let options = { audioBitsPerSecond: 16000 }; 
-                    if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-                        options.mimeType = 'audio/webm;codecs=opus';
-                    }
-                    const mediaRecorder = new MediaRecorder(stream, options); 
-                    mediaRecorderRef.current = mediaRecorder; 
-                    const chunks = []; 
+                    if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) options.mimeType = 'audio/webm;codecs=opus';
+                    const mediaRecorder = new MediaRecorder(stream, options); mediaRecorderRef.current = mediaRecorder; const chunks = []; 
                     mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); }; 
-                    mediaRecorder.onstop = () => { 
-                        const mimeType = mediaRecorder.mimeType || 'audio/mp4';
-                        const blob = new Blob(chunks, { type: mimeType }); 
-                        setAudioBlob(blob); 
-                        setAudioUrl(URL.createObjectURL(blob)); 
-                        stream.getTracks().forEach(track => track.stop()); 
-                    }; 
-                    mediaRecorder.start(); 
-                    setIsRecording(true); 
-                } catch (e) { 
-                    alert("Gagal mengakses Mic. Pastikan browser diizinkan."); 
-                } 
+                    mediaRecorder.onstop = () => { const blob = new Blob(chunks, { type: mediaRecorder.mimeType || 'audio/mp4' }); setAudioBlob(blob); setAudioUrl(URL.createObjectURL(blob)); stream.getTracks().forEach(track => track.stop()); }; 
+                    mediaRecorder.start(); setIsRecording(true); 
+                } catch (e) { alert("Gagal mengakses Mic."); } 
             };
-            
             const stopRecording = () => { if(mediaRecorderRef.current) { mediaRecorderRef.current.stop(); setIsRecording(false); } };
             const deleteRecording = () => { setAudioBlob(null); setAudioUrl(null); };
             
@@ -866,232 +519,80 @@
                 let score = 0; if (!dayData) return 0; 
                 if (dayData.puasaPenuh) score += 20; else if (dayData.puasaSetengah) score += 10;
                 if (dayData.subuh) score += 10; if (dayData.zuhur) score += 10; if (dayData.ashar) score += 10; if (dayData.maghrib) score += 10; if (dayData.isya) score += 10; 
-                if (dayData.tarawih) score += 10; if (dayData.witir) score += 10; if (dayData.tadarus) score += 10; if (dayData.salatMalam) { score += (dayIndex >= 21) ? 20 : 10; } if (dayData.bantuIbu) score += 5; if (dayData.kosakata) score += 5; if (dayData.amalanLainCheck1) score += 5; 
-                if (dayData.amalanLainCheck2) score += 5; 
-                if (dayData.amalanLainCheck3) score += 5; if (dayData.hafalDoa) score += 10; if (dayData.namaPenceramah) score += 5; if (dayData.temaCeramah) score += 10; 
-                
-                if (dayData.eval_game) score -= 20;
-                if (dayData.eval_tidur) score -= 20;
-                if (dayData.eval_nangis) score -= 20;
-                if (dayData.eval_batal) score -= 20;
-                if (dayData.eval_lain) score -= 20;
-
+                if (dayData.tarawih) score += 10; if (dayData.witir) score += 10; if (dayData.tadarus) score += 10; if (dayData.salatMalam) score += (dayIndex >= 21) ? 20 : 10; if (dayData.bantuIbu) score += 5; if (dayData.kosakata) score += 5; if (dayData.amalanLainCheck1) score += 5; if (dayData.amalanLainCheck2) score += 5; if (dayData.amalanLainCheck3) score += 5; if (dayData.hafalDoa) score += 10; if (dayData.namaPenceramah) score += 5; if (dayData.temaCeramah) score += 10; 
+                if (dayData.eval_game) score -= 20; if (dayData.eval_tidur) score -= 20; if (dayData.eval_nangis) score -= 20; if (dayData.eval_batal) score -= 20; if (dayData.eval_lain) score -= 20;
                 return Math.max(0, score); 
             };
             
             const getDisplayScore = () => {
-                let total = 0;
-                let submittedDays = new Set();
-                if (raportData && raportData.length > 0) {
-                    raportData.forEach(row => {
-                        total += (parseInt(row.poin) || 0); 
-                        total += (parseInt(row.nilaiGuru) || 0); 
-                        const text = row.rincian || row.kebaikan || "";
-                        if (!text.includes('🎤') && !text.includes('📸')) {
-                            submittedDays.add(parseInt(row.hari));
-                        }
-                    });
-                }
-                for (let i = 1; i <= 30; i++) {
-                    if (!submittedDays.has(i) && userData[i] && !isDayJournalSubmitted(i)) {
-                        total += calculateDailyScore(userData[i], i);
-                    }
-                }
+                let total = 0; let submittedDays = new Set();
+                if (raportData && raportData.length > 0) { raportData.forEach(row => { total += (parseInt(row.poin) || 0) + (parseInt(row.nilaiGuru) || 0); const text = row.rincian || row.kebaikan || ""; if (!text.includes('🎤') && !text.includes('📸')) submittedDays.add(parseInt(row.hari)); }); }
+                for (let i = 1; i <= 30; i++) { if (!submittedDays.has(i) && userData[i] && !isDayJournalSubmitted(i)) total += calculateDailyScore(userData[i], i); }
                 return total; 
             };
 
             const sendData = async () => {
-                if(!studentProfile.scriptUrl) return alert("Link Script Guru belum diisi! Hubungi gurumu.");
-                if(view === 'hafalan' && (!audioBlob || !namaSurah)) return alert("Rekam & isi nama surah dulu!");
-                if(view === 'achievements' && (!selectedImage)) return alert("Ambil foto terlebih dahulu!");
-                
+                if(!studentProfile.scriptUrl) return alert("Link Script belum disetting!");
+                if(view === 'hafalan' && (!audioBlob || !namaSurah)) return alert("Rekam & isi surah dulu!");
+                if(view === 'achievements' && (!selectedImage)) return alert("Ambil foto dulu!");
                 setIsSubmitting(true);
                 
                 try {
-                    const dayData = userData[activeDay] || {};
-                    let payload = {};
-                    
+                    const dayData = userData[activeDay] || {}; let payload = {};
                     if(view === 'hafalan') {
-                        const b64Audio = await blobToBase64(audioBlob);
-                        payload = { 
-                            action: 'lapor', 
-                            nama: studentProfile.name, 
-                            kelas: studentProfile.class, 
-                            hari: activeDay, 
-                            poin: 0, 
-                            puasa: dayData.puasaPenuh, 
-                            tarawih: dayData.tarawih, 
-                            kebaikan: `🎤 Hafalan: ${namaSurah}`, 
-                            audio: b64Audio, 
-                            foto: "-",
-                            namaSurah: namaSurah 
-                        };
+                        payload = { action: 'lapor', nama: studentProfile.name, kelas: studentProfile.class, hari: activeDay, poin: 0, puasa: dayData.puasaPenuh, tarawih: dayData.tarawih, kebaikan: `🎤 Hafalan: ${namaSurah}`, audio: await blobToBase64(audioBlob), foto: "-", namaSurah: namaSurah };
                     } else if(view === 'achievements') {
-                        payload = { 
-                            action: 'lapor', 
-                            nama: studentProfile.name, 
-                            kelas: studentProfile.class, 
-                            hari: activeDay, 
-                            poin: 0, 
-                            puasa: dayData.puasaPenuh, 
-                            tarawih: dayData.tarawih, 
-                            kebaikan: `📸 Foto: ${selectedImage || 'Kegiatan'}`, 
-                            audio: "-",
-                            foto: base64Image, 
-                            namaFoto: selectedImage 
-                        };
+                        payload = { action: 'lapor', nama: studentProfile.name, kelas: studentProfile.class, hari: activeDay, poin: 0, puasa: dayData.puasaPenuh, tarawih: dayData.tarawih, kebaikan: `📸 Foto: ${selectedImage || 'Kegiatan'}`, audio: "-", foto: base64Image, namaFoto: selectedImage };
                     } else {
                         let rincian = []; 
-                        if(dayData.salatMalam) rincian.push("✅ Qiyam"); 
-                        if(dayData.bantuIbu) rincian.push("✅ Bantu Ortu"); 
-                        if(dayData.kosakata) rincian.push("✅ Kosakata"); 
-                        if(dayData.tarawih) rincian.push("✅ Tarawih"); 
-                        if(dayData.witir) rincian.push("✅ Witir"); 
-                        if(dayData.tadarus) rincian.push("✅ Tadarus"); 
-                        
-                        if(dayData.amalanLainCheck1 && dayData.amalanLain1) rincian.push(`✅ ${dayData.amalanLain1}`);
-                        if(dayData.amalanLainCheck2 && dayData.amalanLain2) rincian.push(`✅ ${dayData.amalanLain2}`);
-                        if(dayData.amalanLainCheck3 && dayData.amalanLain3) rincian.push(`✅ ${dayData.amalanLain3}`);
-                        
-                        let evaluasi = [];
-                        if(dayData.eval_game) evaluasi.push("Main Game");
-                        if(dayData.eval_tidur) evaluasi.push("Tidur");
-                        if(dayData.eval_nangis) evaluasi.push("Menangis");
-                        if(dayData.eval_batal) evaluasi.push("Batal Puasa");
-                        if(dayData.eval_lain) evaluasi.push(dayData.eval_lain_teks || "Lainnya");
-                        
+                        if(dayData.salatMalam) rincian.push("✅ Qiyam"); if(dayData.bantuIbu) rincian.push("✅ Bantu Ortu"); if(dayData.kosakata) rincian.push("✅ Kosakata"); if(dayData.tarawih) rincian.push("✅ Tarawih"); if(dayData.witir) rincian.push("✅ Witir"); if(dayData.tadarus) rincian.push("✅ Tadarus"); 
+                        if(dayData.amalanLainCheck1 && dayData.amalanLain1) rincian.push(`✅ ${dayData.amalanLain1}`); if(dayData.amalanLainCheck2 && dayData.amalanLain2) rincian.push(`✅ ${dayData.amalanLain2}`); if(dayData.amalanLainCheck3 && dayData.amalanLain3) rincian.push(`✅ ${dayData.amalanLain3}`);
+                        let evaluasi = []; if(dayData.eval_game) evaluasi.push("Main Game"); if(dayData.eval_tidur) evaluasi.push("Tidur"); if(dayData.eval_nangis) evaluasi.push("Menangis"); if(dayData.eval_batal) evaluasi.push("Batal Puasa"); if(dayData.eval_lain) evaluasi.push(dayData.eval_lain_teks || "Lainnya");
                         if(evaluasi.length > 0) rincian.push(`⚠️ Evaluasi: ${evaluasi.join(", ")}`);
-                        
-                        payload = { 
-                            action: 'lapor', 
-                            nama: studentProfile.name, 
-                            kelas: studentProfile.class, 
-                            hari: activeDay, 
-                            poin: calculateDailyScore(dayData, activeDay), 
-                            puasa: dayData.puasaPenuh, 
-                            tarawih: dayData.tarawih, 
-                            kebaikan: rincian.join(", "), 
-                            amalanLain1: dayData.amalanLainCheck1 ? (dayData.amalanLain1 || 'Amalan Tambahan 1') : "",
-                            amalanLain2: dayData.amalanLainCheck2 ? (dayData.amalanLain2 || 'Amalan Tambahan 2') : "",
-                            amalanLain3: dayData.amalanLainCheck3 ? (dayData.amalanLain3 || 'Amalan Tambahan 3') : "",
-                            foto: "-", 
-                            audio: "-" 
-                        }; 
+                        payload = { action: 'lapor', nama: studentProfile.name, kelas: studentProfile.class, hari: activeDay, poin: calculateDailyScore(dayData, activeDay), puasa: dayData.puasaPenuh, tarawih: dayData.tarawih, kebaikan: rincian.join(", "), foto: "-", audio: "-" }; 
                     }
+                    payload.deviceId = localStorage.getItem('device_id') || ('dev_' + Math.random().toString(36).substr(2, 9)); localStorage.setItem('device_id', payload.deviceId); payload.deviceInfo = navigator.userAgent;
                     
-                    // --- KODE PELACAK INFO HP & DEVICE ID ---
-                    payload.deviceId = localStorage.getItem('device_id') || ('dev_' + Math.random().toString(36).substr(2, 9));
-                    localStorage.setItem('device_id', payload.deviceId);
-                    payload.deviceInfo = navigator.userAgent;
-                    // ----------------------------------------
-                    
-                    // LAKUKAN PENGIRIMAN (FETCH) DENGAN PENGECEKAN ERROR DARI SERVER
-                    const response = await fetch(studentProfile.scriptUrl, { 
-                        method: 'POST', 
-                        headers: { 'Content-Type': 'text/plain' }, 
-                        body: JSON.stringify(payload) 
-                    });
-                    
+                    const response = await fetch(studentProfile.scriptUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload) });
                     const result = await response.json();
 
-                    // Cek apakah server menolak kiriman (karena nama salah / spam)
-                    if (result.status === "error") {
-                        alert(result.message); 
-                        setIsSubmitting(false);
-                        return; // Hentikan proses, jangan beri tahu "Terkirim"
-                    }
+                    if (result.status === "error") { alert(result.message); setIsSubmitting(false); return; }
                     
-                    // JIKA SUKSES DITERIMA SERVER
-                    triggerConfetti();
-                    alert("Terkirim! Guru akan segera menerima datamu."); 
-                
+                    triggerConfetti(); alert("Terkirim! Guru akan segera menerima datamu."); 
                     let lockType = view === 'hafalan' ? 'audio' : view === 'achievements' ? 'photo' : 'journal';
                     setLocalLocks(prev => ({ ...prev, [`${activeDay}_${lockType}`]: true }));
-
-                    if(view === 'hafalan') deleteRecording();
-                    if(view === 'achievements') removeImage();
-                
+                    if(view === 'hafalan') deleteRecording(); if(view === 'achievements') removeImage();
                     fetchRaport(); 
-
-                } catch(e) { 
-                    alert("Gagal kirim. Cek internet atau link guru."); 
-                } finally { 
-                    setIsSubmitting(false); 
-                } 
+                } catch(e) { alert("Gagal kirim. Cek internet."); } finally { setIsSubmitting(false); } 
             };
             
-            // FUNGSI SINKRONISASI PINTAR (DENGAN PENYAPU SPASI OTOMATIS)
             const fetchRaport = async () => { 
-                if (!studentProfile.scriptUrl) return; 
-                setLoadingRaport(true); 
+                if (!studentProfile.scriptUrl) return; setLoadingRaport(true); 
                 try { 
-                    const res = await fetch(studentProfile.scriptUrl); 
-                    const json = await res.json(); 
-                    
-                    if (json.length === 0) {
-                         const dataKey = getStorageKey('userData');
-                         localStorage.removeItem(dataKey); 
-                         const init = {}; 
-                         for(let i=1; i<=30; i++) { init[i] = { puasa: false, tarawih: false, validated: false }; }
-                         setUserData(init); 
-                         setLocalLocks({}); 
-                         setRaportData([]); 
-                    } else {
-                         // PERBAIKAN DI SINI: MENGGUNAKAN .trim() AGAR KEBAL TERHADAP SPASI BERLEBIH
-                         const myData = json.filter(row => String(row.nama).trim().toLowerCase() === String(studentProfile.name).trim().toLowerCase()); 
-                         setRaportData(myData); 
-                    }
+                    const res = await fetch(studentProfile.scriptUrl); const json = await res.json(); 
+                    if (json.length === 0) { localStorage.removeItem(getStorageKey('userData')); const init = {}; for(let i=1; i<=30; i++) { init[i] = { puasa: false, tarawih: false, validated: false }; } setUserData(init); setLocalLocks({}); setRaportData([]); } 
+                    else { const myData = json.filter(row => String(row.nama).trim().toLowerCase() === String(studentProfile.name).trim().toLowerCase()); setRaportData(myData); }
                 } catch(e) {} finally { setLoadingRaport(false); } 
             };
             
             useEffect(() => { fetchRaport(); }, [studentProfile.scriptUrl]);
             useEffect(() => { if (view === 'raport') fetchRaport(); }, [view]);
 
-            const colorThemes = {
-                hijau: { bgLight: 'bg-emerald-50', bgMain: 'bg-emerald-600', textMain: 'text-emerald-800', btn: 'bg-emerald-600 hover:bg-emerald-700', activeTab: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-                biru: { bgLight: 'bg-blue-50', bgMain: 'bg-blue-600', textMain: 'text-blue-800', btn: 'bg-blue-600 hover:bg-blue-700', activeTab: 'bg-blue-100 text-blue-700 border-blue-200' },
-                ungu: { bgLight: 'bg-purple-50', bgMain: 'bg-purple-600', textMain: 'text-purple-800', btn: 'bg-purple-600 hover:bg-purple-700', activeTab: 'bg-purple-100 text-purple-700 border-purple-200' },
-                pink: { bgLight: 'bg-pink-50', bgMain: 'bg-pink-600', textMain: 'text-pink-800', btn: 'bg-pink-600 hover:bg-pink-700', activeTab: 'bg-pink-100 text-pink-700 border-pink-200' }
-            };
-            const activeThemeKey = studentProfile.theme || 'hijau'; 
-            const theme = colorThemes[activeThemeKey] || colorThemes['hijau'];
-            
-            const handleLogout = () => {
-                if(window.confirm("Yakin ingin keluar ke Menu Utama?")) {
-                    setRole('home');
-                }
-            };
+            const colorThemes = { hijau: { bgLight: 'bg-emerald-50', bgMain: 'bg-emerald-600', textMain: 'text-emerald-800', btn: 'bg-emerald-600 hover:bg-emerald-700', activeTab: 'bg-emerald-100 text-emerald-700 border-emerald-200' }, biru: { bgLight: 'bg-blue-50', bgMain: 'bg-blue-600', textMain: 'text-blue-800', btn: 'bg-blue-600 hover:bg-blue-700', activeTab: 'bg-blue-100 text-blue-700 border-blue-200' }, ungu: { bgLight: 'bg-purple-50', bgMain: 'bg-purple-600', textMain: 'text-purple-800', btn: 'bg-purple-600 hover:bg-purple-700', activeTab: 'bg-purple-100 text-purple-700 border-purple-200' }, pink: { bgLight: 'bg-pink-50', bgMain: 'bg-pink-600', textMain: 'text-pink-800', btn: 'bg-pink-600 hover:bg-pink-700', activeTab: 'bg-pink-100 text-pink-700 border-pink-200' } };
+            const activeThemeKey = studentProfile.theme || 'hijau'; const theme = colorThemes[activeThemeKey];
 
             if (view === 'cover') return (
                 <div className={`h-full ${theme.bgLight} p-6 flex flex-col items-center justify-center text-center font-sans overflow-hidden transition-colors duration-300`}>
                     <div className="bg-white p-6 rounded-3xl shadow-xl w-full border border-slate-100">
                         <h1 className={`text-xl font-bold ${theme.textMain} mb-2`}>Assalamu'alaikum, Murid Sholeh!</h1>
-                        <input type="text" className="w-full p-3 border rounded-xl mb-3" placeholder="Nama Lengkap" value={studentProfile.name} onChange={e => setStudentProfile({...studentProfile, name: e.target.value})} />
-                        <input type="text" className="w-full p-3 border rounded-xl mb-4" placeholder="Kelas" value={studentProfile.class} onChange={e => setStudentProfile({...studentProfile, class: e.target.value})} />
+                        <input type="text" className="w-full p-3 border rounded-xl mb-3 outline-none focus:ring-2 focus:ring-emerald-300" placeholder="Nama Lengkap" value={studentProfile.name} onChange={e => setStudentProfile({...studentProfile, name: e.target.value})} />
+                        <input type="text" className="w-full p-3 border rounded-xl mb-4 outline-none focus:ring-2 focus:ring-emerald-300" placeholder="Kelas" value={studentProfile.class} onChange={e => setStudentProfile({...studentProfile, class: e.target.value})} />
                         
-                        <div className="mb-6">
-                            <p className="text-xs text-gray-400 mb-2 font-bold">Pilih Warna Favoritmu:</p>
-                            <div className="flex gap-3 justify-center">
-                                {['hijau', 'biru', 'ungu', 'pink'].map(t => (
-                                    <button 
-                                        key={t}
-                                        onClick={() => setStudentProfile({...studentProfile, theme: t})}
-                                        className={`w-8 h-8 rounded-full border-2 transition-all transform ${activeThemeKey === t ? 'border-slate-800 scale-125 shadow-md' : 'border-transparent hover:scale-110'} ${t === 'hijau' ? 'bg-emerald-500' : t === 'biru' ? 'bg-blue-500' : t === 'ungu' ? 'bg-purple-500' : 'bg-pink-500'}`}
-                                    ></button>
-                                ))}
-                            </div>
-                        </div>
+                        <div className="mb-6"><p className="text-xs text-gray-400 mb-2 font-bold">Pilih Warna Favoritmu:</p><div className="flex gap-3 justify-center">{['hijau', 'biru', 'ungu', 'pink'].map(t => (<button key={t} onClick={() => setStudentProfile({...studentProfile, theme: t})} className={`w-8 h-8 rounded-full border-2 transition-all transform ${activeThemeKey === t ? 'border-slate-800 scale-125 shadow-md' : 'border-transparent hover:scale-110'} ${t === 'hijau' ? 'bg-emerald-500' : t === 'biru' ? 'bg-blue-500' : t === 'ungu' ? 'bg-purple-500' : 'bg-pink-500'}`}></button>))}</div></div>
 
                         <div className="text-xs text-gray-400 mb-4 flex items-center justify-center gap-1">{studentProfile.scriptUrl ? <span className="text-green-600 flex items-center gap-1"><Icons.Wifi size={12}/> Terhubung ke Guru</span> : <span className="text-red-400 flex items-center gap-1"><Icons.WifiOff size={12}/> Belum Terhubung</span>}</div>
                         
-                        <button onClick={async () => {
-                            setIsSubmitting(true);
-                            await fetchRaport(); 
-                            setIsSubmitting(false);
-                            setView('journal');
-                        }} disabled={!studentProfile.name || isSubmitting} className={`w-full py-3 rounded-xl font-bold text-white transition shadow-md ${!studentProfile.name ? 'bg-slate-300' : theme.btn}`}>
-                            {isSubmitting ? 'Menarik Data...' : 'Buka Bukumu'}
-                        </button>
+                        <button onClick={async () => { setIsSubmitting(true); await fetchRaport(); setIsSubmitting(false); setView('journal'); }} disabled={!studentProfile.name || isSubmitting} className={`w-full py-3 rounded-xl font-bold text-white transition shadow-md ${!studentProfile.name ? 'bg-slate-300' : theme.btn}`}>{isSubmitting ? 'Menarik Data...' : 'Buka Bukumu'}</button>
                         <button onClick={() => setRole('home')} className="mt-4 text-xs text-slate-400 hover:text-slate-600">Kembali ke Menu Utama</button>
                     </div>
                 </div>
@@ -1100,36 +601,19 @@
             return (
                 <div className={`h-full ${theme.bgLight} font-sans flex flex-col overflow-hidden transition-colors duration-300`}>
                     <div className={`${theme.bgMain} text-white p-5 rounded-b-3xl shadow-lg sticky top-0 z-10 shrink-0 transition-colors duration-300`}>
-                        <div className="flex justify-between items-center mb-2">
-                            <div>
-                                <h1 className="font-bold">{studentProfile.name || 'Murid'}</h1>
-                                <p className="text-xs opacity-80">{studentProfile.class || 'Kelas -'}</p>
-                            </div>
-                            <div className="flex gap-2">
-                                <button onClick={() => setView('cover')} className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition"><Icons.Settings size={18}/></button>
-                                <button onClick={handleLogout} className="bg-red-500/80 p-2 rounded-full border border-red-400 hover:bg-red-500 transition"><Icons.LogOut size={18}/></button>
-                            </div>
-                        </div>
+                        <div className="flex justify-between items-center mb-2"><div><h1 className="font-bold">{studentProfile.name || 'Murid'}</h1><p className="text-[10px] opacity-80">{studentProfile.class || 'Kelas -'}</p></div><div className="flex gap-2"><button onClick={() => setView('cover')} className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition"><Icons.Settings size={18}/></button><button onClick={() => { if(window.confirm("Keluar?")) setRole('home'); }} className="bg-red-500/80 p-2 rounded-full border border-red-400 hover:bg-red-500 transition"><Icons.LogOut size={18}/></button></div></div>
                         <div className="bg-black/20 p-2 rounded-xl flex items-center justify-between"><span className="text-xs font-bold flex items-center gap-1"><Icons.Trophy size={14} className="text-yellow-300"/> Total Poin:</span><span className="text-xl font-black text-yellow-300">{getDisplayScore()}</span></div>
                     </div>
                     
                     <div className="px-4 -mt-4 relative z-10 flex-1 overflow-y-auto pb-6">
                         <div className="bg-white p-1 rounded-xl shadow-md flex mb-4 text-[10px] font-bold text-center border border-slate-100 overflow-x-auto sticky top-0 z-20">
-                            {['journal', 'doa', 'hafalan', 'achievements', 'raport'].map(m => (
-                                <button key={m} onClick={() => setView(m)} className={`flex-1 py-2 px-1 capitalize rounded-lg transition-colors border ${view===m ? theme.activeTab : 'text-slate-400 border-transparent hover:bg-slate-50'}`}>
-                                    {m === 'achievements' ? 'Gambar' : m === 'journal' ? 'Jurnal' : m === 'doa' ? 'Doa' : m === 'raport' ? 'Rapor' : m}
-                                </button>
-                            ))}
+                            {['journal', 'doa', 'hafalan', 'achievements', 'raport'].map(m => (<button key={m} onClick={() => setView(m)} className={`flex-1 py-2 px-1 capitalize rounded-lg transition-colors border ${view===m ? theme.activeTab : 'text-slate-400 border-transparent hover:bg-slate-50'}`}>{m === 'achievements' ? 'Gambar' : m === 'journal' ? 'Jurnal' : m === 'doa' ? 'Doa' : m === 'raport' ? 'Rapor' : m}</button>))}
                         </div>
 
-                        {/* NAVIGASI HARI */}
                         {['journal', 'hafalan', 'achievements'].includes(view) && (
                             <div className="flex items-center justify-between bg-white p-2 rounded-xl shadow-sm border border-slate-200 mb-4 animate-in fade-in">
                                 <button onClick={() => setActiveDay(d => Math.max(1, d - 1))} className="p-2 bg-slate-50 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100"><Icons.ChevronLeft size={16}/></button>
-                                <div className="text-center">
-                                    <div className="font-bold text-slate-800">Hari ke-{activeDay}</div>
-                                    <div className="text-[10px] text-slate-500">{currentDateGregorian}</div>
-                                </div>
+                                <div className="text-center"><div className="font-bold text-slate-800">Hari ke-{activeDay}</div><div className="text-[10px] text-slate-500">{currentDateGregorian}</div></div>
                                 <button onClick={() => setActiveDay(d => Math.min(30, d + 1))} className="p-2 bg-slate-50 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100"><Icons.ChevronRight size={16}/></button>
                             </div>
                         )}
@@ -1138,157 +622,50 @@
                             {userData[activeDay]?.validated && <div className="bg-green-100 text-green-700 p-2 rounded-lg text-xs font-bold text-center border border-green-200">✅ Data sudah divalidasi</div>}
                             {isJournalSubmitted && <div className="bg-blue-100 text-blue-700 p-2 rounded-lg text-xs font-bold text-center border border-blue-200">🔒 Laporan Hari Ini Telah Dikirim</div>}
                             
-                            <div className={`bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-4 ${isJournalSubmitted ? 'pointer-events-none' : ''}`}><h3 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center gap-1"><Icons.Sun size={12}/> Puasa Hari Ini</h3><div className="flex gap-2"><button onClick={() => togglePuasa('penuh')} disabled={isJournalSubmitted} className={`flex-1 py-3 px-2 rounded-xl border-2 flex flex-col items-center justify-center transition ${userData[activeDay]?.puasaPenuh ? 'bg-orange-50 border-orange-500' : 'bg-white border-slate-100'}`}><Icons.Sun size={20} className={userData[activeDay]?.puasaPenuh ? "text-orange-500" : "text-slate-300"} /><span className="text-xs font-bold mt-1 text-slate-700">Penuh (20)</span></button><button onClick={() => togglePuasa('setengah')} disabled={isJournalSubmitted} className={`flex-1 py-3 px-2 rounded-xl border-2 flex flex-col items-center justify-center transition ${userData[activeDay]?.puasaSetengah ? 'bg-blue-50 border-blue-500' : 'bg-white border-slate-100'}`}><Icons.CloudSun size={20} className={userData[activeDay]?.puasaSetengah ? "text-blue-500" : "text-slate-300"} /><span className="text-xs font-bold mt-1 text-slate-700">Setengah (10)</span></button></div></div>
+                            <div className={`bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-4 ${isJournalSubmitted ? 'pointer-events-none' : ''}`}><h3 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center gap-1"><Icons.Sun size={12}/> Puasa Hari Ini</h3><div className="flex gap-2"><button onClick={() => togglePuasa('penuh')} disabled={isJournalSubmitted} className={`flex-1 py-3 px-2 rounded-xl border-2 flex flex-col items-center justify-center transition ${userData[activeDay]?.puasaPenuh ? 'bg-orange-50 border-orange-500' : 'bg-white border-slate-100'}`}><Icons.Sun size={20} className={userData[activeDay]?.puasaPenuh ? "text-orange-500" : "text-slate-300"} /><span className="text-[10px] font-bold mt-1 text-slate-700">Penuh (20)</span></button><button onClick={() => togglePuasa('setengah')} disabled={isJournalSubmitted} className={`flex-1 py-3 px-2 rounded-xl border-2 flex flex-col items-center justify-center transition ${userData[activeDay]?.puasaSetengah ? 'bg-blue-50 border-blue-500' : 'bg-white border-slate-100'}`}><Icons.CloudSun size={20} className={userData[activeDay]?.puasaSetengah ? "text-blue-500" : "text-slate-300"} /><span className="text-[10px] font-bold mt-1 text-slate-700">Setengah (10)</span></button></div></div>
                             <div className={`bg-white p-4 rounded-2xl shadow-sm border border-slate-200 ${isJournalSubmitted ? 'pointer-events-none' : ''}`}><h3 className="text-xs font-bold text-slate-400 uppercase mb-3">Shalat Wajib (+10)</h3><div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">{['Subuh','Zuhur','Ashar','Maghrib','Isya'].map(s => (<button key={s} onClick={() => toggleCheck(activeDay, s.toLowerCase())} disabled={isJournalSubmitted} className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold border transition ${userData[activeDay]?.[s.toLowerCase()] ? 'bg-blue-500 text-white border-blue-500 shadow-md' : 'bg-slate-50 text-slate-400 border-slate-200 hover:border-blue-300'}`}>{s}</button>))}</div></div>
                             <div className={`grid grid-cols-3 gap-3 ${isJournalSubmitted ? 'pointer-events-none' : ''}`}>{[{id: 'tarawih', label: 'Tarawih'}, {id: 'witir', label: 'Witir'}, {id: 'tadarus', label: 'Tadarus'}].map(ibadah => (<div key={ibadah.id} onClick={() => toggleCheck(activeDay, ibadah.id)} className={`p-3 rounded-xl border-2 text-center cursor-pointer transition shadow-sm flex flex-col items-center justify-center h-24 ${userData[activeDay]?.[ibadah.id] ? 'bg-indigo-50 border-indigo-500' : 'bg-white border-slate-200 hover:bg-indigo-50'}`}><div className={`mb-1 ${userData[activeDay]?.[ibadah.id] ? 'text-indigo-600' : 'text-slate-300'}`}>{ibadah.id === 'tadarus' ? <Icons.BookOpen size={24}/> : <Icons.Star size={24} className={userData[activeDay]?.[ibadah.id] ? 'fill-indigo-600' : ''}/>}</div><span className="text-[10px] font-bold text-slate-700">{ibadah.label}</span><span className="text-[9px] text-slate-400">+10</span></div>))}</div>
-                            <div className={`bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3 ${isJournalSubmitted ? 'pointer-events-none' : ''}`}><h3 className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1"><Icons.Heart size={12}/> Amalan Harian (+5 Poin)</h3>{[{id: 'bantuIbu', label: 'Membantu Ayah/Ibu'}, {id: 'kosakata', label: 'Menghafal Kosakata'}].map(a => (<div key={a.id} onClick={() => toggleCheck(activeDay, a.id)} className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition ${userData[activeDay]?.[a.id] ? 'bg-emerald-50 border-emerald-500' : 'bg-slate-50 border-slate-200 hover:bg-white'}`}><span className="text-sm font-bold text-slate-700">{a.label}</span>{userData[activeDay]?.[a.id] && <Icons.CheckCircle size={18} className="text-emerald-500"/>}</div>))}{[1, 2, 3].map(num => (
-                                <div key={`amalanLain${num}`} className={`p-3 rounded-xl border transition ${userData[activeDay]?.[`amalanLainCheck${num}`] ? 'bg-emerald-50 border-emerald-500' : 'bg-slate-50 border-slate-200'}`}>
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <input type="checkbox" checked={!!userData[activeDay]?.[`amalanLainCheck${num}`]} onChange={() => toggleCheck(activeDay, `amalanLainCheck${num}`)} disabled={isJournalSubmitted} className="w-5 h-5 accent-emerald-600 rounded cursor-pointer" />
-                                        <span className="text-sm font-bold text-slate-700">Amalan Lainnya {num}</span>
-                                    </div>
-                                    <input type="text" placeholder={`Tulis amalan ke-${num}...`} disabled={isJournalSubmitted} className="w-full text-xs p-2 rounded border border-slate-200 bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none" value={userData[activeDay]?.[`amalanLain${num}`] || ''} onChange={(e) => updateField(activeDay, `amalanLain${num}`, e.target.value)} />
-                                </div>
-                            ))}
-                            </div>
+                            <div className={`bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3 ${isJournalSubmitted ? 'pointer-events-none' : ''}`}><h3 className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1"><Icons.Heart size={12}/> Amalan Harian (+5)</h3>{[{id: 'bantuIbu', label: 'Membantu Ortu'}, {id: 'kosakata', label: 'Hafal Kosakata'}].map(a => (<div key={a.id} onClick={() => toggleCheck(activeDay, a.id)} className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition ${userData[activeDay]?.[a.id] ? 'bg-emerald-50 border-emerald-500' : 'bg-slate-50 border-slate-200 hover:bg-white'}`}><span className="text-xs font-bold text-slate-700">{a.label}</span>{userData[activeDay]?.[a.id] && <Icons.CheckCircle size={18} className="text-emerald-500"/>}</div>))}{[1, 2, 3].map(num => (<div key={`amalanLain${num}`} className={`p-3 rounded-xl border transition ${userData[activeDay]?.[`amalanLainCheck${num}`] ? 'bg-emerald-50 border-emerald-500' : 'bg-slate-50 border-slate-200'}`}><div className="flex items-center gap-2 mb-2"><input type="checkbox" checked={!!userData[activeDay]?.[`amalanLainCheck${num}`]} onChange={() => toggleCheck(activeDay, `amalanLainCheck${num}`)} disabled={isJournalSubmitted} className="w-4 h-4 accent-emerald-600 rounded cursor-pointer" /><span className="text-xs font-bold text-slate-700">Amalan Lain {num}</span></div><input type="text" placeholder="..." disabled={isJournalSubmitted} className="w-full text-xs p-2 rounded border border-slate-200 bg-white outline-none" value={userData[activeDay]?.[`amalanLain${num}`] || ''} onChange={(e) => updateField(activeDay, `amalanLain${num}`, e.target.value)} /></div>))}</div>
                             
-                            <div className={`bg-white p-4 rounded-2xl border border-slate-200 shadow-sm ${isJournalSubmitted ? 'pointer-events-none' : ''}`}><h3 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center gap-1"><Icons.Mic size={12}/> Jurnal Ceramah</h3><div className="space-y-3"><div><label className="text-[10px] text-slate-400 font-bold mb-1 block">Nama Penceramah (+5)</label><input type="text" disabled={isJournalSubmitted} className="w-full text-xs p-3 bg-slate-50 rounded-lg border border-slate-200 focus:border-blue-400 outline-none" placeholder="Contoh: Al-Ustaz Khidir bin Muh. Sunusi" value={userData[activeDay]?.namaPenceramah || ''} onChange={e => updateField(activeDay, 'namaPenceramah', e.target.value)} /></div><div><label className="text-[10px] text-slate-400 font-bold mb-1 block">Tema Ceramah (+10)</label><input type="text" disabled={isJournalSubmitted} className="w-full text-xs p-3 bg-slate-50 rounded-lg border border-slate-200 focus:border-blue-400 outline-none" placeholder="Isi tema ceramah..." value={userData[activeDay]?.temaCeramah || ''} onChange={e => updateField(activeDay, 'temaCeramah', e.target.value)} /></div></div></div>
+                            <div className={`bg-white p-4 rounded-2xl border border-slate-200 shadow-sm ${isJournalSubmitted ? 'pointer-events-none' : ''}`}><h3 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center gap-1"><Icons.Mic size={12}/> Jurnal Ceramah</h3><div className="space-y-3"><div><label className="text-[10px] text-slate-400 font-bold mb-1 block">Nama Penceramah (+5)</label><input type="text" disabled={isJournalSubmitted} className="w-full text-xs p-3 bg-slate-50 rounded-lg border border-slate-200 outline-none" placeholder="Contoh: Ustadz Fulan" value={userData[activeDay]?.namaPenceramah || ''} onChange={e => updateField(activeDay, 'namaPenceramah', e.target.value)} /></div><div><label className="text-[10px] text-slate-400 font-bold mb-1 block">Tema Ceramah (+10)</label><input type="text" disabled={isJournalSubmitted} className="w-full text-xs p-3 bg-slate-50 rounded-lg border border-slate-200 outline-none" placeholder="Isi tema..." value={userData[activeDay]?.temaCeramah || ''} onChange={e => updateField(activeDay, 'temaCeramah', e.target.value)} /></div></div></div>
                             
-                            <div className={`night-sky rounded-2xl p-4 text-white shadow-lg mb-4 border border-indigo-900 ${isJournalSubmitted ? 'pointer-events-none' : ''}`}><div className="star" style={{top: '10%', left: '20%', width: '2px', height: '2px'}}></div><div className="star" style={{top: '40%', left: '80%', width: '3px', height: '3px', animationDelay: '1s'}}></div><div className="flex justify-between items-center relative z-10"><div><h3 className="font-bold text-lg flex items-center gap-2"><Icons.Moon size={18} className="text-yellow-300 fill-yellow-300"/> Salat Malam</h3><p className="text-[10px] text-indigo-200 opacity-80">Qiyamul Lail</p><div className="mt-2 inline-block bg-white/10 border border-white/20 px-2 py-1 rounded text-[10px] font-bold text-yellow-200">Nilai: {activeDay >= 21 ? '20 (Lailatul Qadar)' : '10'} Poin</div></div><button onClick={() => toggleCheck(activeDay, 'salatMalam')} className={`w-12 h-12 rounded-full border-4 flex items-center justify-center transition-all ${userData[activeDay]?.salatMalam ? 'bg-yellow-400 border-yellow-200 text-indigo-900 shadow-[0_0_15px_rgba(250,204,21,0.6)]' : 'bg-transparent border-indigo-400/30 text-transparent hover:bg-white/5'}`} disabled={isJournalSubmitted}><Icons.CheckSquare size={24} strokeWidth={4} /></button></div></div>
+                            <div className={`night-sky rounded-2xl p-4 text-white shadow-lg mb-4 border border-indigo-900 ${isJournalSubmitted ? 'pointer-events-none' : ''}`}><div className="star" style={{top: '10%', left: '20%', width: '2px', height: '2px'}}></div><div className="star" style={{top: '40%', left: '80%', width: '3px', height: '3px', animationDelay: '1s'}}></div><div className="flex justify-between items-center relative z-10"><div><h3 className="font-bold text-lg flex items-center gap-2"><Icons.Moon size={18} className="text-yellow-300 fill-yellow-300"/> Salat Malam</h3><p className="text-[10px] text-indigo-200 opacity-80">Qiyamul Lail</p><div className="mt-2 inline-block bg-white/10 border border-white/20 px-2 py-1 rounded text-[10px] font-bold text-yellow-200">Nilai: {activeDay >= 21 ? '20 (Lailatul Qadar)' : '10'} Poin</div></div><button onClick={() => toggleCheck(activeDay, 'salatMalam')} className={`w-12 h-12 rounded-full border-4 flex items-center justify-center transition-all ${userData[activeDay]?.salatMalam ? 'bg-yellow-400 border-yellow-200 text-indigo-900 shadow-[0_0_15px_rgba(250,204,21,0.6)]' : 'bg-transparent border-indigo-400/30 text-transparent'}`} disabled={isJournalSubmitted}><Icons.CheckSquare size={24} strokeWidth={4} /></button></div></div>
 
                             <div className={`bg-red-50 p-4 rounded-xl border border-red-200 shadow-sm space-y-3 ${isJournalSubmitted ? 'pointer-events-none opacity-80' : ''}`}>
-                                <h3 className="text-xs font-bold text-red-600 uppercase flex items-center gap-1"><Icons.AlertTriangle size={12}/> Evaluasi Harian (Minus Poin)</h3>
-                                {[
-                                    {key: 'eval_game', label: 'Main Game Seharian (-20)'},
-                                    {key: 'eval_tidur', label: 'Tidur Seharian (-20)'},
-                                    {key: 'eval_nangis', label: 'Menangis / Rewel (-20)'},
-                                    {key: 'eval_batal', label: 'Sengaja Batal Puasa (-20)'}
-                                ].map(item => (
-                                     <div key={item.key} onClick={() => toggleCheck(activeDay, item.key)} className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition ${userData[activeDay]?.[item.key] ? 'bg-red-100 border-red-400' : 'bg-white border-red-100'}`}>
-                                         <span className="text-sm font-bold text-slate-700">{item.label}</span>
-                                         {userData[activeDay]?.[item.key] && <div className="bg-red-50 text-red-600 rounded-full p-1"><Icons.XIcon size={12}/></div>}
-                                     </div>
-                                ))}
-
-                                {/* Custom Item */}
-                                <div className={`p-3 rounded-xl border transition ${userData[activeDay]?.eval_lain ? 'bg-red-100 border-red-400' : 'bg-white border-red-100'}`}>
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <input type="checkbox" checked={!!userData[activeDay]?.eval_lain} onChange={() => toggleCheck(activeDay, 'eval_lain')} className="w-5 h-5 accent-red-600 rounded cursor-pointer" />
-                                         <span className="text-sm font-bold text-slate-700">Lainnya (-20)</span>
-                                    </div>
-                                    <input type="text" placeholder="Tulis perilaku kurang baik..." className="w-full text-xs p-2 rounded border border-red-200 bg-white outline-none" value={userData[activeDay]?.eval_lain_teks || ''} onChange={(e) => updateField(activeDay, 'eval_lain_teks', e.target.value)} disabled={!userData[activeDay]?.eval_lain} />
-                                </div>
+                                <h3 className="text-xs font-bold text-red-600 uppercase flex items-center gap-1"><Icons.AlertTriangle size={12}/> Evaluasi (-20)</h3>
+                                {[{key: 'eval_game', label: 'Main Game Terus'}, {key: 'eval_tidur', label: 'Tidur Seharian'}, {key: 'eval_nangis', label: 'Menangis/Rewel'}, {key: 'eval_batal', label: 'Sengaja Batal Puasa'}].map(item => (<div key={item.key} onClick={() => toggleCheck(activeDay, item.key)} className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition ${userData[activeDay]?.[item.key] ? 'bg-red-100 border-red-400' : 'bg-white border-red-100'}`}><span className="text-xs font-bold text-slate-700">{item.label}</span>{userData[activeDay]?.[item.key] && <div className="bg-red-50 text-red-600 rounded-full p-1"><Icons.XIcon size={12}/></div>}</div>))}
+                                <div className={`p-3 rounded-xl border transition ${userData[activeDay]?.eval_lain ? 'bg-red-100 border-red-400' : 'bg-white border-red-100'}`}><div className="flex items-center gap-2 mb-2"><input type="checkbox" checked={!!userData[activeDay]?.eval_lain} onChange={() => toggleCheck(activeDay, 'eval_lain')} className="w-4 h-4 accent-red-600 rounded cursor-pointer" /><span className="text-xs font-bold text-slate-700">Lainnya</span></div><input type="text" placeholder="..." className="w-full text-xs p-2 rounded border border-red-200 bg-white outline-none" value={userData[activeDay]?.eval_lain_teks || ''} onChange={(e) => updateField(activeDay, 'eval_lain_teks', e.target.value)} disabled={!userData[activeDay]?.eval_lain} /></div>
                             </div>
                             
                             <div className="bg-blue-50 p-4 rounded-xl border border-blue-200 text-center shadow-sm mb-2">
-                                <button onClick={sendData} disabled={isSubmitting || isJournalSubmitted} className={`w-full text-white py-3 rounded-xl font-bold flex justify-center items-center gap-2 shadow-md ${isJournalSubmitted ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>
-                                    {isSubmitting ? <Icons.Loader2 className="animate-spin"/> : isJournalSubmitted ? <Icons.CheckCircle/> : <Icons.CloudUpload/>} 
-                                    {isJournalSubmitted ? 'Sudah Dikirim Hari Ini' : 'Kirim Laporan Jurnal'}
-                                </button>
-                                <p className="text-[10px] text-blue-600 mt-2">Poin jurnal dihitung otomatis oleh sistem.</p>
+                                <button onClick={sendData} disabled={isSubmitting || isJournalSubmitted} className={`w-full text-white py-3 rounded-xl font-bold flex justify-center items-center gap-2 shadow-md ${isJournalSubmitted ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>{isSubmitting ? <Icons.Loader2 className="animate-spin"/> : isJournalSubmitted ? <Icons.CheckCircle/> : <Icons.CloudUpload/>} {isJournalSubmitted ? 'Sudah Terkirim' : 'Kirim Jurnal'}</button>
                             </div>
                         </div>)}
 
-                        {view === 'hafalan' && (<div className={`bg-white p-6 rounded-2xl text-center shadow-sm animate-in fade-in border border-slate-200 ${isAudioSubmitted ? 'opacity-80 pointer-events-none' : ''}`}><Icons.Mic size={40} className={`mx-auto mb-2 ${theme.textMain}`}/><h2 className="font-bold mb-4">Setor Hafalan Audio</h2><input className={`w-full border p-3 rounded-xl mb-4 text-sm bg-slate-50 focus:bg-white focus:${theme.activeTab.split(' ')[2]} outline-none`} placeholder="Contoh: Surah An-Nas / Hadits Niat" value={namaSurah} onChange={e=>setNamaSurah(e.target.value)}/>{!audioUrl ? <button onClick={isRecording ? stopRecording : startRecording} className={`w-full py-6 rounded-2xl text-white font-bold text-lg flex items-center justify-center gap-2 shadow-lg transition transform active:scale-95 border ${isRecording ? 'bg-red-500 border-red-600 animate-pulse' : 'bg-blue-600 border-blue-700 hover:bg-blue-700'}`}>{isRecording ? <Icons.StopCircle/> : <Icons.Mic/>} {isRecording ? 'Stop Rekam' : 'Mulai Rekam'}</button> : <div className="space-y-3"><div className="bg-slate-100 p-3 rounded-xl flex items-center gap-2 border border-slate-200"><Icons.Play className="text-blue-500" size={20}/> <span className="text-xs font-bold">Rekaman Siap</span></div><div className="flex gap-2"><button onClick={deleteRecording} className="flex-1 py-3 text-red-500 bg-red-50 rounded-xl font-bold text-xs border border-red-200 hover:bg-red-100">Hapus</button><button onClick={() => {const a = new Audio(audioUrl); a.play()}} className="flex-1 py-3 text-blue-500 bg-blue-50 rounded-xl font-bold text-xs border border-blue-200 hover:bg-blue-100">Dengar</button></div>
-                            <button onClick={sendData} disabled={isSubmitting || isAudioSubmitted} className={`w-full text-white py-3 rounded-xl font-bold flex justify-center gap-2 mt-2 shadow-lg border ${isAudioSubmitted ? 'bg-slate-400 border-slate-500 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 border-green-700'}`}>
-                                {isSubmitting ? <Icons.Loader2 className="animate-spin"/> : isAudioSubmitted ? <Icons.CheckCircle/> : <Icons.CloudUpload/>} 
-                                {isAudioSubmitted ? 'Sudah Dikirim Hari Ini' : 'Kirim Hafalan'}
-                            </button></div>}</div>)}
+                        {view === 'hafalan' && (<div className={`bg-white p-6 rounded-2xl text-center shadow-sm animate-in fade-in border border-slate-200 ${isAudioSubmitted ? 'opacity-80 pointer-events-none' : ''}`}><Icons.Mic size={40} className={`mx-auto mb-2 ${theme.textMain}`}/><h2 className="font-bold mb-4">Setor Hafalan</h2><input className="w-full border p-3 rounded-xl mb-4 text-sm bg-slate-50 outline-none" placeholder="Contoh: Surah An-Nas" value={namaSurah} onChange={e=>setNamaSurah(e.target.value)}/>{!audioUrl ? <button onClick={isRecording ? stopRecording : startRecording} className={`w-full py-6 rounded-2xl text-white font-bold text-lg flex items-center justify-center gap-2 shadow-lg transition transform active:scale-95 border ${isRecording ? 'bg-red-500 border-red-600 animate-pulse' : 'bg-blue-600 border-blue-700'}`}>{isRecording ? <Icons.StopCircle/> : <Icons.Mic/>} {isRecording ? 'Stop Rekam' : 'Mulai Rekam'}</button> : <div className="space-y-3"><div className="bg-slate-100 p-3 rounded-xl flex items-center gap-2 border border-slate-200"><Icons.Play className="text-blue-500" size={20}/> <span className="text-xs font-bold">Rekaman Siap</span></div><div className="flex gap-2"><button onClick={deleteRecording} className="flex-1 py-3 text-red-500 bg-red-50 rounded-xl font-bold text-xs border border-red-200 hover:bg-red-100">Hapus</button><button onClick={() => {const a = new Audio(audioUrl); a.play()}} className="flex-1 py-3 text-blue-500 bg-blue-50 rounded-xl font-bold text-xs border border-blue-200 hover:bg-blue-100">Dengar</button></div>
+                            <button onClick={sendData} disabled={isSubmitting || isAudioSubmitted} className={`w-full text-white py-3 rounded-xl font-bold flex justify-center gap-2 mt-2 shadow-lg border ${isAudioSubmitted ? 'bg-slate-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}>{isSubmitting ? <Icons.Loader2 className="animate-spin"/> : isAudioSubmitted ? <Icons.CheckCircle/> : <Icons.CloudUpload/>} {isAudioSubmitted ? 'Sudah Terkirim' : 'Kirim Hafalan'}</button></div>}</div>)}
                         
-                        {view === 'doa' && (<div className="space-y-3 pb-10">
-                            {DAFTAR_DOA.map((doa, i) => (
-                                <div key={i} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                                    <h3 className={`font-bold text-sm ${theme.textMain} mb-2`}>{doa.judul}</h3>
-                                    <p className="text-right font-serif text-lg leading-loose mb-2 text-slate-800">{doa.arab}</p>
-                                    <p className="text-xs italic text-slate-500 border-t border-slate-100 pt-2">{doa.latin}</p>
-                                    <p className="text-xs text-slate-600 mt-1">{doa.arti}</p>
-                                </div>
-                            ))}
-                        </div>)}
+                        {view === 'doa' && (<div className="space-y-3 pb-10">{DAFTAR_DOA.map((doa, i) => (<div key={i} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200"><h3 className={`font-bold text-sm ${theme.textMain} mb-2`}>{doa.judul}</h3><p className="text-right font-serif text-lg leading-loose mb-2 text-slate-800">{doa.arab}</p><p className="text-xs italic text-slate-500 border-t border-slate-100 pt-2">{doa.latin}</p><p className="text-xs text-slate-600 mt-1">{doa.arti}</p></div>))}</div>)}
                         
-                        {/* TAMPILAN DI RAPORT MURID */}
-                        {view === 'raport' && (<div className="space-y-3 pb-10"><h2 className={`font-bold ${theme.textMain} flex items-center gap-2 mb-2`}><Icons.FileText size={18}/> Riwayat & Nilai</h2>{loadingRaport ? <div className="text-center text-slate-400 py-4">Mengambil data...</div> : raportData.length === 0 ? <div className="text-center text-slate-400 py-4 bg-white rounded-xl border border-slate-200">Belum ada data nilai.</div> : raportData.map((item, idx) => {
-                                const hasAudioLink = item.audio && item.audio.includes('drive.google.com');
-                                const hasFotoLink = item.foto && item.foto.includes('drive.google.com');
-                                const isMedia = hasAudioLink || hasFotoLink;
-                                
-                                return (
-                                <div key={idx} className={`bg-white p-4 rounded-xl shadow-sm border-l-4 ${theme.activeTab.split(' ')[2]} border border-slate-100`}>
-                                    <div className="flex justify-between text-xs text-slate-500 mb-3"><span>Hari ke-{item.hari}</span><span>{new Date(item.waktu).toLocaleDateString()}</span></div>
-                                    
-                                    {/* AUDIO INLINE DI RAPOR MURID */}
-                                    {hasAudioLink && (
-                                        <div className="mb-3">
-                                            <div className="w-full rounded-lg overflow-hidden border border-slate-200 bg-slate-50" style={{ height: '60px' }}>
-                                                <iframe 
-                                                    src={getIframeUrl(item.audio)} 
-                                                    width="100%" 
-                                                    height="100%" 
-                                                    style={{ border: 'none' }} 
-                                                    title="Audio Player">
-                                                </iframe>
-                                            </div>
-                                        </div>
-                                    )}
-                                    
-                                    {/* FOTO DENGAN FITUR ZOOM DI RAPOR MURID */}
-                                    {hasFotoLink && (
-                                        <div className="mb-3 relative inline-block w-full text-center">
-                                            <img 
-                                                src={getValidMediaUrl(item.foto)} 
-                                                alt="Bukti Kegiatan" 
-                                                onClick={() => setZoomedImage(getValidMediaUrl(item.foto))}
-                                                className="w-full max-h-48 object-contain rounded-lg border border-slate-200 shadow-sm mx-auto cursor-zoom-in" 
-                                            />
-                                            <div className="absolute bottom-2 right-2 bg-black/60 text-white p-1.5 rounded-lg pointer-events-none">
-                                                <Icons.ZoomIn size={16} />
-                                            </div>
-                                        </div>
-                                    )}
-                                    
-                                    <div className="font-bold text-slate-800 text-sm mb-1 border-t border-slate-50 pt-2">{item.rincian || item.kebaikan || 'Laporan Harian'}</div>
-                                    
-                                    {(item.nilaiGuru || item.koreksiGuru) ? (
-                                        <div className="mt-2 bg-yellow-50 p-2 rounded-lg border border-yellow-100">
-                                            {item.nilaiGuru && <div className={`text-sm font-bold ${theme.textMain}`}>Nilai: {item.nilaiGuru}</div>}
-                                            {item.koreksiGuru && <div className="text-xs text-slate-600 italic mt-1">"{item.koreksiGuru}"</div>}
-                                        </div>
-                                    ) : (
-                                        isMedia ? <div className="mt-1 text-[10px] text-slate-400 italic">Menunggu penilaian guru...</div> : null
-                                    )}
-                                </div>
-                            )})} 
+                        {view === 'raport' && (<div className="space-y-3 pb-10"><h2 className={`font-bold ${theme.textMain} flex items-center gap-2 mb-2`}><Icons.FileText size={18}/> Riwayat & Nilai</h2>{loadingRaport ? <div className="text-center text-slate-400 py-4">Mengambil data...</div> : raportData.length === 0 ? <div className="text-center text-slate-400 py-4 bg-white rounded-xl border border-slate-200">Kosong.</div> : raportData.map((item, idx) => {
+                                const hasAudio = item.audio && item.audio.includes('drive.google.com'); const hasFoto = item.foto && item.foto.includes('drive.google.com');
+                                return (<div key={idx} className={`bg-white p-4 rounded-xl shadow-sm border-l-4 ${theme.activeTab.split(' ')[2]} border border-slate-100`}><div className="flex justify-between text-[10px] text-slate-500 mb-3"><span>Hari ke-{item.hari}</span><span>{new Date(item.waktu).toLocaleDateString()}</span></div>
+                                    {hasAudio && (<div className="mb-3 w-full rounded-lg overflow-hidden border border-slate-200 bg-slate-50" style={{ height: '60px' }}><iframe src={getIframeUrl(item.audio)} width="100%" height="100%" style={{ border: 'none' }}></iframe></div>)}
+                                    {hasFoto && (<div className="mb-3 relative inline-block w-full text-center"><img src={getValidMediaUrl(item.foto)} alt="Bukti" onClick={() => setZoomedImage(getValidMediaUrl(item.foto))} className="w-full max-h-48 object-contain rounded-lg border border-slate-200 shadow-sm mx-auto cursor-zoom-in" /><div className="absolute bottom-2 right-2 bg-black/60 text-white p-1.5 rounded-lg pointer-events-none"><Icons.ZoomIn size={16} /></div></div>)}
+                                    <div className="font-bold text-slate-800 text-xs mb-1 border-t border-slate-50 pt-2">{item.rincian || item.kebaikan}</div>
+                                    {(item.nilaiGuru || item.koreksiGuru) ? (<div className="mt-2 bg-yellow-50 p-2 rounded-lg border border-yellow-100">{item.nilaiGuru && <div className={`text-xs font-bold ${theme.textMain}`}>Nilai: {item.nilaiGuru}</div>}{item.koreksiGuru && <div className="text-[10px] text-slate-600 italic mt-1">"{item.koreksiGuru}"</div>}</div>) : ((hasAudio || hasFoto) ? <div className="mt-1 text-[9px] text-slate-400 italic">Menunggu penilaian...</div> : null)}
+                                </div>)})} 
                         </div>)}
 
-                        {view === 'achievements' && (<div className={`bg-white p-5 rounded-2xl shadow-sm text-center border border-slate-200 ${isPhotoSubmitted ? 'opacity-80 pointer-events-none' : ''}`}><h2 className="text-lg font-bold mb-1">Lapor Gambar</h2><p className="text-xs text-slate-500 mb-4">Kirim foto kegiatan Ramadan.</p><div className="mb-4 text-left p-3 bg-slate-50 rounded-xl border border-dashed border-slate-300"><label className="text-xs font-bold text-slate-400 block mb-2">Upload Foto</label>{!selectedImage ? <label className="flex items-center justify-center h-20 cursor-pointer hover:bg-slate-100 transition rounded-lg"><Icons.Camera className="text-slate-300 mr-2"/><span className="text-xs text-slate-400">Ambil Foto</span><input type="file" accept="image/*" className="hidden" onChange={handleImageUpload}/></label> : <div className="flex items-center justify-between"><span className="text-xs truncate max-w-[150px]">{selectedImage}</span><button onClick={removeImage} className="text-red-500 p-2 hover:bg-red-50 rounded-full"><Icons.XIcon size={16}/></button></div>}</div>
-                        <button onClick={sendData} disabled={isSubmitting || isPhotoSubmitted} className={`w-full text-white font-bold py-3 rounded-xl shadow-lg flex justify-center items-center gap-2 transition transform active:scale-95 border ${isPhotoSubmitted ? 'bg-slate-400 border-slate-500 cursor-not-allowed' : theme.btn}`}>
-                            {isSubmitting ? <Icons.Loader2 className="animate-spin"/> : isPhotoSubmitted ? <Icons.CheckCircle/> : <Icons.CloudUpload/>} 
-                            {isPhotoSubmitted ? 'Sudah Dikirim Hari Ini' : 'Kirim Foto'}
-                        </button></div>)}
+                        {view === 'achievements' && (<div className={`bg-white p-5 rounded-2xl shadow-sm text-center border border-slate-200 ${isPhotoSubmitted ? 'opacity-80 pointer-events-none' : ''}`}><h2 className="text-lg font-bold mb-1">Lapor Gambar</h2><p className="text-xs text-slate-500 mb-4">Kirim foto kegiatan Ramadan.</p><div className="mb-4 text-left p-3 bg-slate-50 rounded-xl border border-dashed border-slate-300"><label className="text-[10px] font-bold text-slate-400 block mb-2">Upload Foto</label>{!selectedImage ? <label className="flex items-center justify-center h-20 cursor-pointer hover:bg-slate-100 transition rounded-lg"><Icons.Camera className="text-slate-300 mr-2"/><span className="text-xs text-slate-400">Ambil Foto</span><input type="file" accept="image/*" className="hidden" onChange={handleImageUpload}/></label> : <div className="flex items-center justify-between"><span className="text-xs truncate max-w-[150px]">{selectedImage}</span><button onClick={removeImage} className="text-red-500 p-2 hover:bg-red-50 rounded-full"><Icons.XIcon size={16}/></button></div>}</div>
+                        <button onClick={sendData} disabled={isSubmitting || isPhotoSubmitted} className={`w-full text-white font-bold py-3 rounded-xl shadow-lg flex justify-center items-center gap-2 transition transform active:scale-95 border ${isPhotoSubmitted ? 'bg-slate-400 cursor-not-allowed' : theme.btn}`}>{isSubmitting ? <Icons.Loader2 className="animate-spin"/> : isPhotoSubmitted ? <Icons.CheckCircle/> : <Icons.CloudUpload/>} {isPhotoSubmitted ? 'Sudah Terkirim' : 'Kirim Foto'}</button></div>)}
                     </div>
-
                     {showConfetti && <div className="fixed inset-0 flex items-center justify-center z-50 text-6xl animate-bounce">🎉</div>}
-
-                    {/* MODAL ZOOM GAMBAR UNTUK MURID (FULL SCREEN) */}
-                    {zoomedImage && (
-                        <div className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-2 backdrop-blur-md">
-                            <button onClick={() => setZoomedImage(null)} className="absolute top-6 right-6 bg-red-600 text-white p-3 rounded-full shadow-2xl hover:bg-red-700 active:scale-95 transition z-[110]">
-                                <Icons.XIcon size={28}/>
-                            </button>
-                            <div className="w-full h-full overflow-auto flex items-center justify-center">
-                                <img src={zoomedImage} alt="Zoomed" className="max-w-full max-h-full object-contain" />
-                            </div>
-                        </div>
-                    )}
+                    {zoomedImage && (<div className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-2 backdrop-blur-md"><button onClick={() => setZoomedImage(null)} className="absolute top-6 right-6 bg-red-600 text-white p-3 rounded-full shadow-2xl hover:bg-red-700 active:scale-95 transition z-[110]"><Icons.XIcon size={28}/></button><div className="w-full h-full overflow-auto flex items-center justify-center"><img src={zoomedImage} alt="Zoomed" className="max-w-full max-h-full object-contain" /></div></div>)}
                 </div>
             );
         }
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        const root = ReactDOM.createRoot(document.getElementById('root')); root.render(<App />);
     </script>
 </body>
 </html>
-
-
-
